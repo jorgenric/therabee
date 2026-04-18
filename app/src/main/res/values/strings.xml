@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">Therapy Companion</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_today">Today</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home / Today screen -->
+    <string name="home_title">Today</string>
+    <string name="home_empty_title">You\'re all caught up.</string>
+    <string name="home_empty_body">No exercises are scheduled for today, or all have been completed. Check your library to add or adjust exercises.</string>
+    <string name="easier_day_label">Easier Day</string>
+    <string name="easier_day_description">Reduces today\'s exercise count by half</string>
+
+    <!-- Session status -->
+    <string name="session_status_completed">Done</string>
+    <string name="session_status_skipped">Skipped</string>
+    <string name="session_status_in_progress">In progress</string>
+
+    <!-- Session screen -->
+    <string name="session_instructions_label">Instructions</string>
+    <string name="session_notes_label">Notes</string>
+    <string name="session_done">Done</string>
+    <string name="session_skip">Skip</string>
+
+    <!-- Library screen -->
+    <string name="library_title">Exercise Library</string>
+    <string name="library_empty_title">No exercises yet.</string>
+    <string name="library_empty_body">Tap the + button to add your first exercise, or import a spreadsheet from Settings.</string>
+
+    <!-- Exercise edit screen -->
+    <string name="exercise_edit_title_new">New Exercise</string>
+    <string name="exercise_edit_title_edit">Edit Exercise</string>
+    <string name="exercise_field_name">Name</string>
+    <string name="exercise_field_instructions">Instructions</string>
+    <string name="exercise_field_notes">Notes (optional)</string>
+    <string name="exercise_field_duration">Duration (minutes)</string>
+    <string name="exercise_add_photo">Add Photo</string>
+    <string name="exercise_change_photo">Change Photo</string>
+    <string name="exercise_save">Save Exercise</string>
+
+    <!-- Progress screen -->
+    <string name="progress_title">Progress</string>
+    <string name="progress_no_data">No check-in data yet. Complete a session and record a check-in to see your trends here.</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_morning_reminder">Morning reminder</string>
+    <string name="settings_afternoon_checkin">Afternoon check-in prompt</string>
+    <string name="settings_evening_encouragement">Evening encouragement</string>
+    <string name="settings_check_ins_enabled">Pain and energy check-ins</string>
+    <string name="settings_import_exercises">Import exercises from spreadsheet</string>
+    <string name="settings_backup_note">Exercise photos are stored on this device only and are not included in backup files.</string>
+
+    <!-- Import screen -->
+    <string name="import_title">Import Exercises</string>
+    <string name="import_description">Import exercises from a CSV or TSV spreadsheet. The file must include columns: name, body_system, instructions, duration, frequency, days, priority. Download the template to get started.</string>
+    <string name="import_choose_file">Choose CSV / TSV File</string>
+    <string name="import_download_template">Download Blank Template</string>
+    <string name="import_confirm">Import All</string>
+
+    <!-- Check-in bottom sheet -->
+    <string name="checkin_title">How are you feeling?</string>
+    <string name="checkin_subtitle">Take a moment to check in. This helps track your progress over time.</string>
+    <string name="checkin_pain_label">Pain level</string>
+    <string name="checkin_energy_label">Energy level</string>
+    <string name="checkin_next">Next</string>
+    <string name="checkin_dismiss">Not now</string>
+    <string name="checkin_skip_layer2">Just save my scores</string>
+    <string name="checkin_layer2_title">A bit more (optional)</string>
+    <string name="checkin_free_text_label">Anything else to note? (optional)</string>
+    <string name="checkin_no_thanks">No thanks</string>
+    <string name="checkin_submit">Save</string>
+
+    <!-- Acknowledgment messages — shown after completing a session -->
+    <!-- These rotate randomly. Add or edit freely — no code changes needed. -->
+    <string-array name="acknowledgment_messages">
+        <item>You showed up today.</item>
+        <item>One session at a time.</item>
+        <item>Progress isn\'t always visible, but it\'s always real.</item>
+        <item>Your body is working hard. So are you.</item>
+        <item>You did something good for yourself today.</item>
+        <item>Small steps still move you forward.</item>
+        <item>Rest is part of the process too.</item>
+        <item>Every session matters.</item>
+        <item>You\'re building something, day by day.</item>
+        <item>Showing up is the hardest part. You did it.</item>
+    </string-array>
+
+    <!-- Content descriptions for accessibility -->
+    <string name="cd_refresh">Refresh today\'s exercises</string>
+    <string name="cd_start_exercise">Start %1$s</string>
+    <string name="cd_skip_exercise">Skip %1$s</string>
+    <string name="cd_add_exercise">Add exercise</string>
+    <string name="cd_edit_exercise">Edit exercise</string>
+    <string name="cd_exercise_image">Image showing %1$s</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_close">Close</string>
+</resources>

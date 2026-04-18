@@ -1,0 +1,33 @@
+*.hprof
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# App build outputs
+*.apk
+*.aab
+*.ap_
+
+# Keystore / signing — never commit these
+*.jks
+*.keystore
+keystore.properties
+
+# KSP / annotation processor generated sources
+build/generated/
+
+# Profiling and benchmark artifacts
+*.trace
+
+# macOS metadata
+__MACOSX/
+
+# Gradle wrapper jar — must be committed for reproducible builds
+# Do NOT add: gradle/wrapper/gradle-wrapper.jar

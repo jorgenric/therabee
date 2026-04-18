@@ -1,0 +1,8 @@
+com.therapycompanion.app-pngs-0 /Users/ericjorgenson/Projects/therabee/app/build/generated/res/pngs/debug
+com.therapycompanion.app-resValues-1 /Users/ericjorgenson/Projects/therabee/app/build/generated/res/resValues/debug
+com.therapycompanion.app-updated_navigation_xml-2 /Users/ericjorgenson/Projects/therabee/app/build/generated/updated_navigation_xml/debug
+com.therapycompanion.app-packageDebugResources-3 /Users/ericjorgenson/Projects/therabee/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.therapycompanion.app-packageDebugResources-4 /Users/ericjorgenson/Projects/therabee/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.therapycompanion.app-debug-5 /Users/ericjorgenson/Projects/therabee/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.therapycompanion.app-debug-6 /Users/ericjorgenson/Projects/therabee/app/src/debug/res
+com.therapycompanion.app-main-7 /Users/ericjorgenson/Projects/therabee/app/src/main/res
