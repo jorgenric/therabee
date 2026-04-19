@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.therapycompanion.data.model.Exercise
 import com.therapycompanion.data.model.Frequency
 import com.therapycompanion.data.model.DayBits
+import com.therapycompanion.data.model.SessionStatus
 import com.therapycompanion.data.repository.ExerciseRepository
+import com.therapycompanion.data.repository.SessionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,11 +18,20 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class LibraryUiState(
-    /** Exercises grouped by title-cased body system, sorted alphabetically. */
+    val allExercises: List<Exercise> = emptyList(),
+    /** Filtered + grouped result shown in the list. */
     val groupedExercises: Map<String, List<Exercise>> = emptyMap(),
+    /** Distinct body systems — drives the filter chip row. */
+    val allBodySystems: List<String> = emptyList(),
     val isLoading: Boolean = true,
-    /** Which body system headers are currently expanded. Defaults to all open on first load. */
-    val expandedSystems: Set<String> = emptySet()
+    /** All groups collapsed by default (empty set = all collapsed). */
+    val expandedSystems: Set<String> = emptySet(),
+    val searchQuery: String = "",
+    /** null = show all systems; non-null = show only that system. */
+    val bodySystemFilter: String? = null,
+    val filterNotDoneRecently: Boolean = false,
+    /** IDs of exercises completed in the last 7 days. */
+    val recentlyDoneIds: Set<String> = emptySet()
 )
 
 data class ExerciseEditUiState(
@@ -50,44 +61,112 @@ data class ExerciseEditUiState(
 
 // ── LibraryViewModel ──────────────────────────────────────────────────────────
 
+private const val RECENTLY_DONE_DAYS = 7L
+
 class LibraryViewModel(
-    private val exerciseRepository: ExerciseRepository
+    private val exerciseRepository: ExerciseRepository,
+    private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
     init {
+        // Observe exercises.
         viewModelScope.launch {
             exerciseRepository.getAllExercises().collect { exercises ->
-                val grouped = exercises
-                    .groupBy { it.bodySystem.toTitleCase() }
-                    .entries
-                    .sortedBy { it.key.lowercase() }
-                    .associate { it.key to it.value }
+                val systems = exercises
+                    .map { it.bodySystem.toTitleCase() }
+                    .distinct()
+                    .sortedBy { it.lowercase() }
+                _uiState.update { it.copy(allExercises = exercises, allBodySystems = systems, isLoading = false) }
+                _uiState.update { recompute(it) }
+            }
+        }
 
-                _uiState.update { current ->
-                    // On first load, expand all groups by default.
-                    val expanded = if (current.expandedSystems.isEmpty()) grouped.keys.toSet()
-                                   else current.expandedSystems
-                    current.copy(groupedExercises = grouped, isLoading = false, expandedSystems = expanded)
-                }
+        // Observe sessions completed in the last 7 days for the "not done recently" filter.
+        viewModelScope.launch {
+            val sevenDaysAgo = System.currentTimeMillis() - RECENTLY_DONE_DAYS * 24 * 3600 * 1000
+            sessionRepository.getSessionsInDateRangeFlow(sevenDaysAgo, Long.MAX_VALUE).collect { sessions ->
+                val recentIds = sessions
+                    .filter { it.status == SessionStatus.Completed }
+                    .map { it.exerciseId }
+                    .toSet()
+                _uiState.update { recompute(it.copy(recentlyDoneIds = recentIds)) }
             }
         }
     }
 
     fun toggleBodySystem(system: String) {
         _uiState.update { state ->
+            // Toggle only applies when not in search/filter mode (recompute handles expansion there).
             val expanded = state.expandedSystems.toMutableSet()
             if (system in expanded) expanded.remove(system) else expanded.add(system)
             state.copy(expandedSystems = expanded)
         }
     }
 
-    class Factory(private val repo: ExerciseRepository) : ViewModelProvider.Factory {
+    fun setSearchQuery(query: String) {
+        _uiState.update { recompute(it.copy(searchQuery = query)) }
+    }
+
+    fun setBodySystemFilter(system: String?) {
+        _uiState.update { recompute(it.copy(bodySystemFilter = system)) }
+    }
+
+    fun setNotDoneRecentlyFilter(enabled: Boolean) {
+        _uiState.update { recompute(it.copy(filterNotDoneRecently = enabled)) }
+    }
+
+    fun clearFilters() {
+        _uiState.update { recompute(it.copy(searchQuery = "", bodySystemFilter = null, filterNotDoneRecently = false)) }
+    }
+
+    /**
+     * Applies search query and active filters to [allExercises], groups the result,
+     * and auto-expands matching groups whenever any filter is active.
+     */
+    private fun recompute(state: LibraryUiState): LibraryUiState {
+        val query = state.searchQuery.trim().lowercase()
+        val anyFilterActive = query.isNotBlank() || state.bodySystemFilter != null || state.filterNotDoneRecently
+
+        var filtered = state.allExercises
+
+        if (state.bodySystemFilter != null) {
+            filtered = filtered.filter { it.bodySystem.equals(state.bodySystemFilter, ignoreCase = true) }
+        }
+        if (state.filterNotDoneRecently) {
+            filtered = filtered.filter { it.id !in state.recentlyDoneIds }
+        }
+        if (query.isNotBlank()) {
+            filtered = filtered.filter { ex ->
+                ex.name.lowercase().contains(query) ||
+                ex.bodySystem.lowercase().contains(query) ||
+                ex.instructions.lowercase().contains(query) ||
+                ex.notes?.lowercase()?.contains(query) == true
+            }
+        }
+
+        val grouped = filtered
+            .groupBy { it.bodySystem.toTitleCase() }
+            .entries
+            .sortedBy { it.key.lowercase() }
+            .associate { it.key to it.value }
+
+        // Auto-expand all matching groups when a filter/search is active;
+        // otherwise respect the user's manual expand/collapse state.
+        val expanded = if (anyFilterActive) grouped.keys.toSet() else state.expandedSystems
+
+        return state.copy(groupedExercises = grouped, expandedSystems = expanded)
+    }
+
+    class Factory(
+        private val exerciseRepo: ExerciseRepository,
+        private val sessionRepo: SessionRepository
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            LibraryViewModel(repo) as T
+            LibraryViewModel(exerciseRepo, sessionRepo) as T
     }
 }
 
