@@ -16,7 +16,11 @@ data class UserSettings(
     val quietHoursStart: String? = null,
     val quietHoursEnd: String? = null,
     val checkInsEnabled: Boolean = true,
-    val showStreaks: Boolean = false
+    val showStreaks: Boolean = false,
+    /** Name shown in the Home screen greeting. Blank = no name shown. */
+    val displayName: String = "",
+    /** "System" | "Light" | "Dark" */
+    val themeMode: String = "System"
 ) {
     companion object {
         val Default = UserSettings()

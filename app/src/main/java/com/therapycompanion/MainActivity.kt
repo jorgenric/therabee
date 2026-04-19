@@ -7,11 +7,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.therapycompanion.data.model.UserSettings
 import com.therapycompanion.ui.navigation.EXTRA_NAVIGATE_TO
 import com.therapycompanion.ui.navigation.NAVIGATE_TO_TODAY
 import com.therapycompanion.ui.navigation.TherapyCompanionNavGraph
@@ -44,7 +48,17 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            TherapyCompanionTheme {
+            val app = applicationContext as TherapyCompanionApp
+            val settings by app.userSettingsRepository.getUserSettings()
+                .collectAsState(initial = UserSettings.Default)
+
+            val darkTheme = when (settings.themeMode) {
+                "Dark" -> true
+                "Light" -> false
+                else -> isSystemInDarkTheme()
+            }
+
+            TherapyCompanionTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

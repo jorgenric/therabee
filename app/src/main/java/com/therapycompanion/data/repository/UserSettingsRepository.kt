@@ -32,4 +32,10 @@ class UserSettingsRepository(private val dao: UserSettingsDao) {
 
     suspend fun setEasierDayEnabled(enabled: Boolean) =
         dao.setEasierDayEnabled(enabled)
+
+    suspend fun setDisplayName(name: String) =
+        dao.setDisplayName(name)
+
+    suspend fun setThemeMode(mode: String) =
+        dao.setThemeMode(mode)
 }

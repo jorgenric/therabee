@@ -70,11 +70,13 @@ fun HomeScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    val greeting = when (LocalTime.now().hour) {
+    val basGreeting = when (LocalTime.now().hour) {
         in 5..11 -> "Good morning"
         in 12..16 -> "Good afternoon"
         else -> "Good evening"
     }
+    val displayName = uiState.settings.displayName.trim()
+    val greeting = if (displayName.isNotEmpty()) "$basGreeting, $displayName" else basGreeting
 
     // Show check-in bottom sheet when conditions are met.
     if (uiState.showCheckInPrompt) {

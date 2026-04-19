@@ -51,6 +51,8 @@ class HomeViewModel(
 
     private var cachedDate: LocalDate? = null
     private var cachedInputExercises: List<Exercise>? = null
+    private var cachedDailyLoad: Int? = null
+    private var cachedEasierDay: Boolean? = null
     private var cachedExercises: List<Exercise>? = null
 
     /** Prevents re-prompting within the same app session. */
@@ -89,7 +91,13 @@ class HomeViewModel(
             sessionRepository.getSessionsInDateRange(start = weekStart, end = dayEnd)
         }
 
-        val scheduled = if (today == cachedDate && allExercises == cachedInputExercises && cachedExercises != null) {
+        val scheduled = if (
+            today == cachedDate &&
+            allExercises == cachedInputExercises &&
+            settings.dailyLoad == cachedDailyLoad &&
+            settings.easierDayEnabled == cachedEasierDay &&
+            cachedExercises != null
+        ) {
             cachedExercises!!
         } else {
             DailyScheduler.selectDailyExercises(
@@ -102,6 +110,8 @@ class HomeViewModel(
             ).also {
                 cachedDate = today
                 cachedInputExercises = allExercises
+                cachedDailyLoad = settings.dailyLoad
+                cachedEasierDay = settings.easierDayEnabled
                 cachedExercises = it
             }
         }
@@ -144,6 +154,8 @@ class HomeViewModel(
             userSettingsRepository.setEasierDayEnabled(enabled)
             cachedDate = null
             cachedInputExercises = null
+            cachedDailyLoad = null
+            cachedEasierDay = null
             cachedExercises = null
         }
     }
@@ -197,6 +209,8 @@ class HomeViewModel(
     fun refreshDailyList() {
         cachedDate = null
         cachedInputExercises = null
+        cachedDailyLoad = null
+        cachedEasierDay = null
         cachedExercises = null
     }
 

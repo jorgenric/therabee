@@ -25,7 +25,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CheckInEntity::class,
         UserSettingsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -69,13 +69,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Version 3 → 4: adds display_name and theme_mode to user_settings.
+         * Both use safe defaults so existing rows are unaffected.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE user_settings ADD COLUMN display_name TEXT NOT NULL DEFAULT ''"
+                )
+                database.execSQL(
+                    "ALTER TABLE user_settings ADD COLUMN theme_mode TEXT NOT NULL DEFAULT 'System'"
+                )
+            }
+        }
+
         private fun buildDatabase(context: Context): AppDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 DATABASE_NAME
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 }
