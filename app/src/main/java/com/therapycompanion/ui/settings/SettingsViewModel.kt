@@ -96,6 +96,8 @@ class SettingsViewModel(
     fun updateQuietHoursEnd(time: String?) = save(_uiState.value.settings.copy(quietHoursEnd = time))
     fun updateCheckInsEnabled(enabled: Boolean) = save(_uiState.value.settings.copy(checkInsEnabled = enabled))
     fun updateShowStreaks(enabled: Boolean) = save(_uiState.value.settings.copy(showStreaks = enabled))
+    fun updateDisplayName(name: String) = save(_uiState.value.settings.copy(displayName = name))
+    fun updateThemeMode(mode: String) = save(_uiState.value.settings.copy(themeMode = mode))
 
     // ── Export (file picker destination) ──────────────────────────────────────
 

@@ -30,8 +30,7 @@ data class HomeUiState(
     val settings: UserSettings = UserSettings.Default,
     val isLoading: Boolean = true,
     val currentDate: LocalDate = LocalDate.now(),
-    val showCheckInPrompt: Boolean = false,
-    val acknowledgmentMessage: String? = null
+    val showCheckInPrompt: Boolean = false
 )
 
 data class ExerciseWithStatus(
@@ -44,18 +43,17 @@ class HomeViewModel(
     private val exerciseRepository: ExerciseRepository,
     private val sessionRepository: SessionRepository,
     private val userSettingsRepository: UserSettingsRepository,
-    private val checkInRepository: CheckInRepository,
-    private val acknowledgmentMessages: List<String>
+    private val checkInRepository: CheckInRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var cachedDate: LocalDate? = null
+    private var cachedInputExercises: List<Exercise>? = null
+    private var cachedDailyLoad: Int? = null
+    private var cachedEasierDay: Boolean? = null
     private var cachedExercises: List<Exercise>? = null
-
-    /** -1 = not yet computed (suppress acknowledgment on first load). */
-    private var previousCompletedCount = -1
 
     /** Prevents re-prompting within the same app session. */
     private var hasShownCheckInThisSession = false
@@ -93,7 +91,13 @@ class HomeViewModel(
             sessionRepository.getSessionsInDateRange(start = weekStart, end = dayEnd)
         }
 
-        val scheduled = if (today == cachedDate && cachedExercises != null) {
+        val scheduled = if (
+            today == cachedDate &&
+            allExercises == cachedInputExercises &&
+            settings.dailyLoad == cachedDailyLoad &&
+            settings.easierDayEnabled == cachedEasierDay &&
+            cachedExercises != null
+        ) {
             cachedExercises!!
         } else {
             DailyScheduler.selectDailyExercises(
@@ -105,6 +109,9 @@ class HomeViewModel(
                 today = today
             ).also {
                 cachedDate = today
+                cachedInputExercises = allExercises
+                cachedDailyLoad = settings.dailyLoad
+                cachedEasierDay = settings.easierDayEnabled
                 cachedExercises = it
             }
         }
@@ -120,16 +127,6 @@ class HomeViewModel(
                 sessionId = session?.id
             )
         }
-
-        // Detect a new completion since the last recompute.
-        // previousCompletedCount == -1 on first load — skip acknowledgment then.
-        val completedCount = exercisesWithStatus.count { it.status == SessionStatus.Completed }
-        val acknowledgment = if (previousCompletedCount >= 0 && completedCount > previousCompletedCount) {
-            acknowledgmentMessages.randomOrNull()
-        } else {
-            null
-        }
-        previousCompletedCount = completedCount
 
         // Show the check-in prompt if enabled, not yet shown this session, and not done today.
         val showPrompt = if (settings.checkInsEnabled && !hasShownCheckInThisSession) {
@@ -147,9 +144,7 @@ class HomeViewModel(
                 settings = settings,
                 isLoading = false,
                 currentDate = today,
-                showCheckInPrompt = showPrompt,
-                // Don't overwrite a message that's still being displayed.
-                acknowledgmentMessage = acknowledgment ?: state.acknowledgmentMessage
+                showCheckInPrompt = showPrompt
             )
         }
     }
@@ -158,6 +153,9 @@ class HomeViewModel(
         viewModelScope.launch {
             userSettingsRepository.setEasierDayEnabled(enabled)
             cachedDate = null
+            cachedInputExercises = null
+            cachedDailyLoad = null
+            cachedEasierDay = null
             cachedExercises = null
         }
     }
@@ -208,12 +206,11 @@ class HomeViewModel(
         _uiState.update { it.copy(showCheckInPrompt = false) }
     }
 
-    fun dismissAcknowledgment() {
-        _uiState.update { it.copy(acknowledgmentMessage = null) }
-    }
-
     fun refreshDailyList() {
         cachedDate = null
+        cachedInputExercises = null
+        cachedDailyLoad = null
+        cachedEasierDay = null
         cachedExercises = null
     }
 
@@ -221,8 +218,7 @@ class HomeViewModel(
         private val exerciseRepository: ExerciseRepository,
         private val sessionRepository: SessionRepository,
         private val userSettingsRepository: UserSettingsRepository,
-        private val checkInRepository: CheckInRepository,
-        private val acknowledgmentMessages: List<String>
+        private val checkInRepository: CheckInRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -230,8 +226,7 @@ class HomeViewModel(
                 exerciseRepository,
                 sessionRepository,
                 userSettingsRepository,
-                checkInRepository,
-                acknowledgmentMessages
+                checkInRepository
             ) as T
     }
 }

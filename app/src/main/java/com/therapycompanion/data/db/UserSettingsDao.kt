@@ -41,4 +41,10 @@ interface UserSettingsDao {
      */
     @Query("UPDATE user_settings SET easier_day_enabled = :enabled WHERE id = 1")
     suspend fun setEasierDayEnabled(enabled: Boolean)
+
+    @Query("UPDATE user_settings SET display_name = :name WHERE id = 1")
+    suspend fun setDisplayName(name: String)
+
+    @Query("UPDATE user_settings SET theme_mode = :mode WHERE id = 1")
+    suspend fun setThemeMode(mode: String)
 }

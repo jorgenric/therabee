@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -45,7 +46,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.therapycompanion.R
 import com.therapycompanion.TherapyCompanionApp
 import com.therapycompanion.data.model.CheckIn
+import com.therapycompanion.data.model.Session
+import com.therapycompanion.data.model.SessionStatus
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -85,6 +90,11 @@ fun ProgressScreen(contentPadding: PaddingValues) {
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                // ── Exercises this week ───────────────────────────────────
+                item {
+                    WeekSummary(count = uiState.exercisesThisWeek)
+                }
+
                 // ── Calendar view ────────────────────────────────────────
                 item {
                     CalendarSection(
@@ -114,6 +124,27 @@ fun ProgressScreen(contentPadding: PaddingValues) {
                 item {
                     if (uiState.checkIns.isNotEmpty()) {
                         TrendChart(checkIns = uiState.checkIns)
+                    }
+                }
+
+                // ── Session history log ───────────────────────────────────
+                val history = uiState.sessions
+                    .filter { it.status == SessionStatus.Completed || it.status == SessionStatus.Skipped }
+                    .sortedByDescending { it.startedAt }
+
+                if (history.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Session History",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    items(history, key = { it.id }) { session ->
+                        SessionHistoryItem(
+                            session = session,
+                            exerciseName = uiState.exerciseNamesById[session.exerciseId] ?: "Unknown"
+                        )
                     }
                 }
             }
@@ -375,6 +406,82 @@ private fun LegendItem(color: Color, label: String) {
             " $label",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+// ── Week summary ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun WeekSummary(count: Int) {
+    val exercises = if (count == 1) "exercise" else "exercises"
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Column {
+            Text(
+                text = "$exercises this week",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = if (count == 0) "Nothing logged yet — you've got this."
+                       else "Keep the momentum going.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ── Session history item ──────────────────────────────────────────────────────
+
+@Composable
+private fun SessionHistoryItem(session: Session, exerciseName: String) {
+    val zoneId = ZoneId.systemDefault()
+    val date = Instant.ofEpochMilli(session.startedAt)
+        .atZone(zoneId)
+        .toLocalDate()
+    val dateLabel = date.format(DateTimeFormatter.ofPattern("MMM d · EEE", Locale.getDefault()))
+
+    val isCompleted = session.status == SessionStatus.Completed
+    val durationLabel = if (isCompleted && session.elapsedSeconds > 0) {
+        val mins = session.elapsedSeconds / 60
+        val secs = session.elapsedSeconds % 60
+        if (mins > 0) "${mins}m ${secs}s" else "${secs}s"
+    } else {
+        null
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = exerciseName,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = if (durationLabel != null) "$dateLabel · $durationLabel"
+                       else dateLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = if (isCompleted) "Done" else "Skipped",
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isCompleted) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

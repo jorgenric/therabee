@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
@@ -28,22 +29,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -52,6 +48,7 @@ import com.therapycompanion.R
 import com.therapycompanion.TherapyCompanionApp
 import com.therapycompanion.data.model.SessionStatus
 import com.therapycompanion.ui.checkin.CheckInBottomSheet
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -63,17 +60,23 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TherapyCompanionApp
-    val acknowledgmentMessages = stringArrayResource(R.array.acknowledgment_messages).toList()
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.Factory(
             app.exerciseRepository,
             app.sessionRepository,
             app.userSettingsRepository,
-            app.checkInRepository,
-            acknowledgmentMessages
+            app.checkInRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    val basGreeting = when (LocalTime.now().hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    val displayName = uiState.settings.displayName.trim()
+    val greeting = if (displayName.isNotEmpty()) "$basGreeting, $displayName" else basGreeting
 
     // Show check-in bottom sheet when conditions are met.
     if (uiState.showCheckInPrompt) {
@@ -85,23 +88,14 @@ fun HomeScreen(
         )
     }
 
-    // Show acknowledgment message as a Snackbar after a session is completed.
-    val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(uiState.acknowledgmentMessage) {
-        val message = uiState.acknowledgmentMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
-        viewModel.dismissAcknowledgment()
-    }
-
     Scaffold(
         modifier = Modifier.padding(contentPadding),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.home_title),
+                            text = greeting,
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
@@ -147,8 +141,35 @@ fun HomeScreen(
                     EmptyTodayState()
                 }
                 else -> {
+                    val completedCount = uiState.todaysExercises.count { it.status == SessionStatus.Completed }
+                    val totalCount = uiState.todaysExercises.size
+                    val nextExercise = uiState.todaysExercises.firstOrNull { it.status == null }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        DailySummary(completed = completedCount, total = totalCount)
+
+                        if (nextExercise != null) {
+                            Button(
+                                onClick = { onStartSession(nextExercise.exercise.id) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Filled.PlayArrow,
+                                    contentDescription = null
+                                )
+                                Spacer(Modifier.size(8.dp))
+                                Text("Start: ${nextExercise.exercise.name}")
+                            }
+                        }
+                    }
+
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.todaysExercises, key = { it.exercise.id }) { item ->
@@ -280,6 +301,20 @@ private fun ExerciseCard(
             }
         }
     }
+}
+
+@Composable
+private fun DailySummary(completed: Int, total: Int) {
+    val message = when {
+        completed == 0 -> "You have $total exercise${if (total == 1) "" else "s"} today."
+        completed == total -> "All done for today — great work!"
+        else -> "$completed of $total done today — keep it going!"
+    }
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable

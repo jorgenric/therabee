@@ -65,5 +65,13 @@ data class UserSettingsEntity(
 
     /** When true, a consecutive-day streak (with one grace day) is shown on the Progress screen */
     @ColumnInfo(name = "show_streaks")
-    val showStreaks: Boolean = false
+    val showStreaks: Boolean = false,
+
+    /** Name shown in the Home screen greeting. Blank = no name shown. */
+    @ColumnInfo(name = "display_name")
+    val displayName: String = "",
+
+    /** "System" | "Light" | "Dark" */
+    @ColumnInfo(name = "theme_mode")
+    val themeMode: String = "System"
 )

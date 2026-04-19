@@ -454,18 +454,19 @@ This section defines the contract for that recovery path. The design goal is tha
 
 ### 10.1 · Export Contents
 
-A full export is a single JSON file capturing the complete state of the user's program and history:
+A full export is a single JSON file capturing the complete state of the user's program and history. The root object fields are:
 
-| Section | Contents | Notes |
+| JSON field | Type | Contents |
 | --- | --- | --- |
-| `meta` | Export schema version, app version, export timestamp, device label (optional) | Used by import to decide migration steps |
-| `settings` | All fields from the `UserSettings` table | Restores display name, daily load, notification schedule, theme, toggles |
-| `exercises` | All rows from the `Exercise` table — including `active = false` rows | Historically imported exercises are preserved so old sessions still resolve to a name, even if the exercise has been retired |
-| `sessions` | Complete `Session` history — every Completed / Skipped / Partial record | This is the "exercises completed" history |
-| `check_ins` | Complete `CheckIn` history, including dismissed rows | Preserves FPS-R, energy, and BPI interference trends |
-| `schema_version` | Integer matching the current Room schema version | Enables forward-compatible import into newer app versions |
+| `version` | Int | Backup format version (currently `1`). Incremented only if the JSON structure itself changes in a breaking way. |
+| `schemaVersion` | Int | Room database schema version at export time. Import refuses files where this exceeds the installed app's schema version. |
+| `exportedAt` | Long | UTC epoch milliseconds of export time. |
+| `exercises` | Array | All rows from the `Exercise` table — including `active = false` rows. Retired exercises are preserved so old sessions still resolve to a name. |
+| `sessions` | Array | Complete `Session` history — every Completed / Skipped / InProgress record. |
+| `checkIns` | Array | Complete `CheckIn` history, including dismissed rows. Preserves FPS-R, energy, and BPI interference trends. |
+| `userSettings` | Object or null | All fields from the `UserSettings` table. Restores daily load, notification schedule, toggles, and preferences. |
 
-Images referenced by `image_uri` are **not** inlined in the JSON. If a future version supports image bundling, exports will be a `.zip` containing the JSON plus an `images/` directory, and the export file extension will signal the format (`.json` for data-only, `.zip` for data + media).
+Images referenced by `imageFileName` are **not** inlined in the JSON — only the filename reference is kept. A disclaimer is shown in the export UI. If a future version supports image bundling, exports will be a `.zip` containing the JSON plus an `images/` directory.
 
 ### 10.2 · Export Triggers
 
@@ -497,14 +498,64 @@ This text is also available permanently from the Settings → About screen so it
 
 ### 10.5 · CSV Export (View-Only)
 
-Separately from the full JSON backup, the app supports two CSV exports oriented to sharing with a clinician rather than round-tripping data:
+Separately from the full JSON backup, the app supports two CSV exports oriented to sharing with a clinician rather than round-tripping data. Both are UTF-8 encoded, sorted most-recent-first.
 
-- **Session history CSV** — one row per session with columns: `date`, `exercise_name`, `body_system`, `status`, `duration_actual`. Covers a user-selected date range.
-- **Check-in history CSV** — as defined in §9; columns: `date`, `fps_r_score`, `energy_level`, `bpi_domain`, `bpi_score`, `free_text_note`.
+**Session history CSV** — one row per session:
+
+| Column | Contents |
+| --- | --- |
+| `id` | Session UUID |
+| `exerciseId` | Exercise UUID (join key if used alongside an exercise export) |
+| `date` | Local date/time of session start (`yyyy-MM-dd HH:mm:ss`) |
+| `status` | `Completed` · `Skipped` · `InProgress` |
+| `elapsedSeconds` | Actual time spent in seconds |
+| `notes` | Session notes, if any |
+
+**Check-in history CSV** — one row per check-in:
+
+| Column | Contents |
+| --- | --- |
+| `id` | Check-in UUID |
+| `date` | Local date/time of check-in (`yyyy-MM-dd HH:mm:ss`) |
+| `painScore` | FPS-R score: `0` `2` `4` `6` `8` `10` — blank if not recorded |
+| `energyScore` | Energy scale score: `0` `2` `4` `6` `8` `10` — blank if not recorded |
+| `bpiDomain` | BPI interference domain shown that day — blank if Layer 2 not used |
+| `bpiScore` | BPI interference score `0–10` — blank if not recorded |
+| `freeText` | Free-text note (Sunday prompt) — blank if not entered |
 
 CSV exports are a read-only view, not a backup. The importer does not accept them.
 
-### 10.6 · Failure Modes & Safeguards
+### 10.6 · Exercise CSV Import Format
+
+Settings → "Import exercises" accepts a UTF-8 or Windows-1252 encoded `.csv` or `.tsv` file. The file is validated entirely before any row is committed (all-or-nothing). Lines beginning with `#` are treated as comments and ignored — the bundled template uses this to embed format hints inline.
+
+**Required columns** (header row, case-insensitive):
+
+| Column | Type | Accepted values |
+| --- | --- | --- |
+| `name` | String | Any non-blank string, ≤ 100 characters |
+| `body_system` | String | Any non-blank string, ≤ 100 characters. No fixed list — any label is valid. |
+| `instructions` | String | Any non-blank string. Wrap in `"..."` if it contains commas. |
+| `duration` | Number | Integer or decimal minutes ≥ 1. Decimals are rounded up (`5.5` → `6`). |
+| `frequency` | Enum | `Daily` · `3xWeek` · `2xWeek` · `AsTolerated` · `Weekly` |
+| `days` | String | `Daily` · `Weekdays` · `Weekends` · or comma-separated day names |
+| `priority` | Int or label | `1` / `high` / `essential` · `2` / `medium` / `important` · `3` / `low` / `supplemental` |
+
+**Optional columns:**
+
+| Column | Default | Accepted values |
+| --- | --- | --- |
+| `notes` | *(blank)* | Any string |
+| `active` | `true` | `true` / `false` / `yes` / `no` / `0` |
+
+**Flexible aliases** — the parser accepts common variants without requiring exact strings:
+
+- `frequency`: `3x/Week`, `3 times a week`, `twice a week`, `as tolerated`, `PRN`, `once a week`, `every day`, etc.
+- `days`: full names (`Monday`, `Tuesday`, …), single-letter abbreviations (`M` `Tu` `W` `Th` `F` `Sa` `Su`), or `Weekdays` / `Weekends` / `All`
+
+**Encoding:** UTF-8 (with or without BOM), UTF-16 (with BOM), and Windows-1252 are all detected automatically. Files exported directly from Excel on Windows or Mac import without re-encoding.
+
+### 10.7 · Failure Modes & Safeguards
 
 - The export routine validates that the generated JSON parses cleanly before offering the share sheet; a malformed export is never handed to the user.
 - Import writes to a staging database and atomically swaps it in only after a successful parse + migration. The live database is never partially overwritten.
@@ -578,6 +629,12 @@ These are out of scope for the initial build but worth designing around from the
 ---
 
 ## §14 Revision Notes
+
+### v1.3 — Export format clarifications & exercise import specification
+
+*Sections touched: §10.1, §10.5, new §10.6 (renumbered Failure Modes to §10.7).*
+
+Updated §10.1 to document the actual JSON field names produced by the exporter (`schemaVersion`, `exportedAt`, `checkIns`, `userSettings`). Updated §10.5 CSV export column names to match implementation. Added §10.6 formally specifying the exercise CSV import format: required and optional columns, accepted type formats, flexible frequency/days/priority aliases, and auto-detected encoding support (UTF-8, UTF-16, Windows-1252). Lines beginning with `#` in import files are treated as comments and ignored.
 
 ### v1.2 — Backup, restore & update-safety
 

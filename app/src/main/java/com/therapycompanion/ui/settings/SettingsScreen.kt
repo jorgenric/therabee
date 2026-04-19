@@ -255,6 +255,47 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Profile ────────────────────────────────────────────────────
+            item { SectionHeader("Profile") }
+            item {
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    OutlinedTextField(
+                        value = settings.displayName,
+                        onValueChange = { viewModel.updateDisplayName(it) },
+                        label = { Text("Your name") },
+                        placeholder = { Text("Shown in the greeting on Home") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Divider()
+            }
+
+            // ── Appearance ─────────────────────────────────────────────────
+            item { SectionHeader("Appearance") }
+            item {
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Text(
+                        "Theme",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    listOf("System", "Light", "Dark").forEach { mode ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = settings.themeMode == mode,
+                                onClick = { viewModel.updateThemeMode(mode) }
+                            )
+                            Text(mode, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                Divider()
+            }
+
             // ── Daily load ─────────────────────────────────────────────────
             item { SectionHeader("Exercise Load") }
             item {
