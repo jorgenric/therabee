@@ -61,4 +61,11 @@ interface CheckInDao {
 
     @Query("DELETE FROM check_ins WHERE id = :id")
     suspend fun deleteCheckInById(id: String)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCheckInIgnore(checkIn: CheckInEntity)
+
+    @Query("DELETE FROM check_ins")
+    suspend fun deleteAll()
 }

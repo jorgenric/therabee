@@ -52,4 +52,9 @@ class SessionRepository(private val dao: SessionDao) {
 
     suspend fun deleteSessionById(id: String) =
         dao.deleteSessionById(id)
+
+    suspend fun insertSessionIgnore(session: Session) =
+        dao.insertSessionIgnore(session.toEntity())
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

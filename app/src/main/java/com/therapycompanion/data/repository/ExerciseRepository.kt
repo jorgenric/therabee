@@ -60,4 +60,9 @@ class ExerciseRepository(private val dao: ExerciseDao) {
 
     suspend fun setExerciseActive(id: String, active: Boolean) =
         dao.setExerciseActive(id, active)
+
+    suspend fun insertExerciseIgnore(exercise: Exercise) =
+        dao.insertExerciseIgnore(exercise.toEntity())
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

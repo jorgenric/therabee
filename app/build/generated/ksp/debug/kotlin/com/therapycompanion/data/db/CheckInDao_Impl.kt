@@ -29,11 +29,53 @@ public class CheckInDao_Impl(
 
   private val __insertAdapterOfCheckInEntity: EntityInsertAdapter<CheckInEntity>
 
+  private val __insertAdapterOfCheckInEntity_1: EntityInsertAdapter<CheckInEntity>
+
   private val __updateAdapterOfCheckInEntity: EntityDeleteOrUpdateAdapter<CheckInEntity>
   init {
     this.__db = __db
     this.__insertAdapterOfCheckInEntity = object : EntityInsertAdapter<CheckInEntity>() {
       protected override fun createQuery(): String = "INSERT OR ABORT INTO `check_ins` (`id`,`checked_in_at`,`pain_score`,`energy_score`,`bpi_domain`,`bpi_score`,`free_text`,`dismissed`) VALUES (?,?,?,?,?,?,?,?)"
+
+      protected override fun bind(statement: SQLiteStatement, entity: CheckInEntity) {
+        statement.bindText(1, entity.id)
+        statement.bindLong(2, entity.checkedInAt)
+        val _tmpPainScore: Int? = entity.painScore
+        if (_tmpPainScore == null) {
+          statement.bindNull(3)
+        } else {
+          statement.bindLong(3, _tmpPainScore.toLong())
+        }
+        val _tmpEnergyScore: Int? = entity.energyScore
+        if (_tmpEnergyScore == null) {
+          statement.bindNull(4)
+        } else {
+          statement.bindLong(4, _tmpEnergyScore.toLong())
+        }
+        val _tmpBpiDomain: String? = entity.bpiDomain
+        if (_tmpBpiDomain == null) {
+          statement.bindNull(5)
+        } else {
+          statement.bindText(5, _tmpBpiDomain)
+        }
+        val _tmpBpiScore: Int? = entity.bpiScore
+        if (_tmpBpiScore == null) {
+          statement.bindNull(6)
+        } else {
+          statement.bindLong(6, _tmpBpiScore.toLong())
+        }
+        val _tmpFreeText: String? = entity.freeText
+        if (_tmpFreeText == null) {
+          statement.bindNull(7)
+        } else {
+          statement.bindText(7, _tmpFreeText)
+        }
+        val _tmp: Int = if (entity.dismissed) 1 else 0
+        statement.bindLong(8, _tmp.toLong())
+      }
+    }
+    this.__insertAdapterOfCheckInEntity_1 = object : EntityInsertAdapter<CheckInEntity>() {
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `check_ins` (`id`,`checked_in_at`,`pain_score`,`energy_score`,`bpi_domain`,`bpi_score`,`free_text`,`dismissed`) VALUES (?,?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: CheckInEntity) {
         statement.bindText(1, entity.id)
@@ -117,6 +159,10 @@ public class CheckInDao_Impl(
 
   public override suspend fun insertCheckIn(checkIn: CheckInEntity): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfCheckInEntity.insert(_connection, checkIn)
+  }
+
+  public override suspend fun insertCheckInIgnore(checkIn: CheckInEntity): Unit = performSuspending(__db, false, true) { _connection ->
+    __insertAdapterOfCheckInEntity_1.insert(_connection, checkIn)
   }
 
   public override suspend fun updateCheckIn(checkIn: CheckInEntity): Unit = performSuspending(__db, false, true) { _connection ->
@@ -504,6 +550,18 @@ public class CheckInDao_Impl(
       try {
         var _argIndex: Int = 1
         _stmt.bindText(_argIndex, id)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteAll() {
+    val _sql: String = "DELETE FROM check_ins"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
         _stmt.step()
       } finally {
         _stmt.close()

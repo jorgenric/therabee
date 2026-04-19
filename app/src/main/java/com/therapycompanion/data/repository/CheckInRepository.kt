@@ -38,4 +38,9 @@ class CheckInRepository(private val dao: CheckInDao) {
 
     suspend fun deleteCheckInById(id: String) =
         dao.deleteCheckInById(id)
+
+    suspend fun insertCheckInIgnore(checkIn: CheckIn) =
+        dao.insertCheckInIgnore(checkIn.toEntity())
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

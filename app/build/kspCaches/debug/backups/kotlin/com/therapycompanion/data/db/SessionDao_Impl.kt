@@ -28,11 +28,36 @@ public class SessionDao_Impl(
 
   private val __insertAdapterOfSessionEntity: EntityInsertAdapter<SessionEntity>
 
+  private val __insertAdapterOfSessionEntity_1: EntityInsertAdapter<SessionEntity>
+
   private val __updateAdapterOfSessionEntity: EntityDeleteOrUpdateAdapter<SessionEntity>
   init {
     this.__db = __db
     this.__insertAdapterOfSessionEntity = object : EntityInsertAdapter<SessionEntity>() {
       protected override fun createQuery(): String = "INSERT OR ABORT INTO `sessions` (`id`,`exercise_id`,`started_at`,`completed_at`,`elapsed_seconds`,`status`,`notes`) VALUES (?,?,?,?,?,?,?)"
+
+      protected override fun bind(statement: SQLiteStatement, entity: SessionEntity) {
+        statement.bindText(1, entity.id)
+        statement.bindText(2, entity.exerciseId)
+        statement.bindLong(3, entity.startedAt)
+        val _tmpCompletedAt: Long? = entity.completedAt
+        if (_tmpCompletedAt == null) {
+          statement.bindNull(4)
+        } else {
+          statement.bindLong(4, _tmpCompletedAt)
+        }
+        statement.bindLong(5, entity.elapsedSeconds)
+        statement.bindText(6, entity.status)
+        val _tmpNotes: String? = entity.notes
+        if (_tmpNotes == null) {
+          statement.bindNull(7)
+        } else {
+          statement.bindText(7, _tmpNotes)
+        }
+      }
+    }
+    this.__insertAdapterOfSessionEntity_1 = object : EntityInsertAdapter<SessionEntity>() {
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `sessions` (`id`,`exercise_id`,`started_at`,`completed_at`,`elapsed_seconds`,`status`,`notes`) VALUES (?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: SessionEntity) {
         statement.bindText(1, entity.id)
@@ -82,6 +107,10 @@ public class SessionDao_Impl(
 
   public override suspend fun insertSession(session: SessionEntity): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfSessionEntity.insert(_connection, session)
+  }
+
+  public override suspend fun insertSessionIgnore(session: SessionEntity): Unit = performSuspending(__db, false, true) { _connection ->
+    __insertAdapterOfSessionEntity_1.insert(_connection, session)
   }
 
   public override suspend fun updateSession(session: SessionEntity): Unit = performSuspending(__db, false, true) { _connection ->
@@ -560,6 +589,18 @@ public class SessionDao_Impl(
       try {
         var _argIndex: Int = 1
         _stmt.bindText(_argIndex, id)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteAll() {
+    val _sql: String = "DELETE FROM sessions"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
         _stmt.step()
       } finally {
         _stmt.close()

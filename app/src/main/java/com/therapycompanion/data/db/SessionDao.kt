@@ -116,4 +116,11 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun deleteSessionById(id: String)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSessionIgnore(session: SessionEntity)
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAll()
 }

@@ -31,6 +31,8 @@ public class ExerciseDao_Impl(
 
   private val __insertAdapterOfExerciseEntity_1: EntityInsertAdapter<ExerciseEntity>
 
+  private val __insertAdapterOfExerciseEntity_2: EntityInsertAdapter<ExerciseEntity>
+
   private val __deleteAdapterOfExerciseEntity: EntityDeleteOrUpdateAdapter<ExerciseEntity>
 
   private val __updateAdapterOfExerciseEntity: EntityDeleteOrUpdateAdapter<ExerciseEntity>
@@ -74,6 +76,42 @@ public class ExerciseDao_Impl(
     }
     this.__insertAdapterOfExerciseEntity_1 = object : EntityInsertAdapter<ExerciseEntity>() {
       protected override fun createQuery(): String = "INSERT OR REPLACE INTO `exercises` (`id`,`name`,`body_system`,`instructions`,`notes`,`duration_minutes`,`frequency`,`scheduled_days`,`priority`,`active`,`image_file_name`,`video_file_name`,`created_at`,`updated_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+
+      protected override fun bind(statement: SQLiteStatement, entity: ExerciseEntity) {
+        statement.bindText(1, entity.id)
+        statement.bindText(2, entity.name)
+        statement.bindText(3, entity.bodySystem)
+        statement.bindText(4, entity.instructions)
+        val _tmpNotes: String? = entity.notes
+        if (_tmpNotes == null) {
+          statement.bindNull(5)
+        } else {
+          statement.bindText(5, _tmpNotes)
+        }
+        statement.bindLong(6, entity.durationMinutes.toLong())
+        statement.bindText(7, entity.frequency)
+        statement.bindLong(8, entity.scheduledDays.toLong())
+        statement.bindLong(9, entity.priority.toLong())
+        val _tmp: Int = if (entity.active) 1 else 0
+        statement.bindLong(10, _tmp.toLong())
+        val _tmpImageFileName: String? = entity.imageFileName
+        if (_tmpImageFileName == null) {
+          statement.bindNull(11)
+        } else {
+          statement.bindText(11, _tmpImageFileName)
+        }
+        val _tmpVideoFileName: String? = entity.videoFileName
+        if (_tmpVideoFileName == null) {
+          statement.bindNull(12)
+        } else {
+          statement.bindText(12, _tmpVideoFileName)
+        }
+        statement.bindLong(13, entity.createdAt)
+        statement.bindLong(14, entity.updatedAt)
+      }
+    }
+    this.__insertAdapterOfExerciseEntity_2 = object : EntityInsertAdapter<ExerciseEntity>() {
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `exercises` (`id`,`name`,`body_system`,`instructions`,`notes`,`duration_minutes`,`frequency`,`scheduled_days`,`priority`,`active`,`image_file_name`,`video_file_name`,`created_at`,`updated_at`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: ExerciseEntity) {
         statement.bindText(1, entity.id)
@@ -164,6 +202,10 @@ public class ExerciseDao_Impl(
 
   public override suspend fun upsertExercise(exercise: ExerciseEntity): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfExerciseEntity_1.insert(_connection, exercise)
+  }
+
+  public override suspend fun insertExerciseIgnore(exercise: ExerciseEntity): Unit = performSuspending(__db, false, true) { _connection ->
+    __insertAdapterOfExerciseEntity_2.insert(_connection, exercise)
   }
 
   public override suspend fun deleteExercise(exercise: ExerciseEntity): Unit = performSuspending(__db, false, true) { _connection ->
@@ -762,6 +804,18 @@ public class ExerciseDao_Impl(
         _stmt.bindLong(_argIndex, _tmp.toLong())
         _argIndex = 2
         _stmt.bindText(_argIndex, id)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteAll() {
+    val _sql: String = "DELETE FROM exercises"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
         _stmt.step()
       } finally {
         _stmt.close()

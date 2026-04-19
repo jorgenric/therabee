@@ -70,4 +70,11 @@ interface ExerciseDao {
 
     @Query("UPDATE exercises SET active = :active WHERE id = :id")
     suspend fun setExerciseActive(id: String, active: Boolean)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertExerciseIgnore(exercise: ExerciseEntity)
+
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAll()
 }

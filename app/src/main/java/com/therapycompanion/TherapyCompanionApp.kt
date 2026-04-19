@@ -9,6 +9,7 @@ import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
 import com.therapycompanion.data.repository.UserSettingsRepository
+import com.therapycompanion.backup.BackupWorker
 import com.therapycompanion.notification.NotificationScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,7 @@ class TherapyCompanionApp : Application() {
         createNotificationChannels()
         initializeDefaultSettings()
         observeSettingsForNotifications()
+        BackupWorker.schedule(this)
     }
 
     /**

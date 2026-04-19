@@ -22,8 +22,18 @@ sealed class RestoreResult {
 }
 
 /**
+ * Three import strategies (NFR-13):
+ *
+ *  - Replace: wipe local data first, then insert everything from the file.
+ *  - MergeKeepBoth: INSERT IGNORE — existing rows are untouched, new IDs are inserted.
+ *  - MergePreferFile: exercises from file win (upsert); session + check-in data is combined
+ *    (INSERT IGNORE so duplicates are silently skipped).
+ */
+enum class MergeStrategy { Replace, MergeKeepBoth, MergePreferFile }
+
+/**
  * Restores all data from a JSON backup file.
- * Existing data with matching IDs is replaced (upsert behavior).
+ * Refuses files whose schemaVersion exceeds the app's current schema version (NFR-13).
  */
 object JsonImporter {
 
@@ -32,12 +42,12 @@ object JsonImporter {
         exerciseRepository: ExerciseRepository,
         sessionRepository: SessionRepository,
         checkInRepository: CheckInRepository,
-        userSettingsRepository: UserSettingsRepository
+        userSettingsRepository: UserSettingsRepository,
+        strategy: MergeStrategy = MergeStrategy.Replace
     ): RestoreResult {
         val backup = JsonExporter.parse(file)
             ?: return RestoreResult.Error("Could not parse backup file. The file may be corrupted or from an incompatible version.")
-
-        return restoreFromBackup(backup, exerciseRepository, sessionRepository, checkInRepository, userSettingsRepository)
+        return restoreFromBackup(backup, exerciseRepository, sessionRepository, checkInRepository, userSettingsRepository, strategy)
     }
 
     suspend fun restore(
@@ -45,56 +55,108 @@ object JsonImporter {
         exerciseRepository: ExerciseRepository,
         sessionRepository: SessionRepository,
         checkInRepository: CheckInRepository,
-        userSettingsRepository: UserSettingsRepository
+        userSettingsRepository: UserSettingsRepository,
+        strategy: MergeStrategy = MergeStrategy.Replace
     ): RestoreResult {
         val backup = JsonExporter.parse(text)
             ?: return RestoreResult.Error("Could not parse backup data.")
-
-        return restoreFromBackup(backup, exerciseRepository, sessionRepository, checkInRepository, userSettingsRepository)
+        return restoreFromBackup(backup, exerciseRepository, sessionRepository, checkInRepository, userSettingsRepository, strategy)
     }
+
+    /** Restores from an already-parsed [BackupData] (e.g., after previewing it). */
+    suspend fun restore(
+        backup: BackupData,
+        exerciseRepository: ExerciseRepository,
+        sessionRepository: SessionRepository,
+        checkInRepository: CheckInRepository,
+        userSettingsRepository: UserSettingsRepository,
+        strategy: MergeStrategy = MergeStrategy.Replace
+    ): RestoreResult = restoreFromBackup(backup, exerciseRepository, sessionRepository, checkInRepository, userSettingsRepository, strategy)
 
     private suspend fun restoreFromBackup(
         backup: BackupData,
         exerciseRepository: ExerciseRepository,
         sessionRepository: SessionRepository,
         checkInRepository: CheckInRepository,
-        userSettingsRepository: UserSettingsRepository
+        userSettingsRepository: UserSettingsRepository,
+        strategy: MergeStrategy
     ): RestoreResult {
+        // NFR-13: refuse files from a newer schema version.
+        if (backup.schemaVersion > JsonExporter.CURRENT_SCHEMA_VERSION) {
+            return RestoreResult.Error(
+                "This backup was made with a newer version of the app (schema ${backup.schemaVersion}). " +
+                "Please update the app before restoring."
+            )
+        }
+
         return try {
             var exercisesRestored = 0
             var sessionsRestored = 0
             var checkInsRestored = 0
 
-            backup.exercises.forEach { eb ->
-                val exercise = eb.toDomain() ?: return@forEach
-                exerciseRepository.upsertExercise(exercise)
-                exercisesRestored++
-            }
+            when (strategy) {
+                MergeStrategy.Replace -> {
+                    // Wipe existing data, then insert everything from the backup.
+                    checkInRepository.deleteAll()
+                    sessionRepository.deleteAll()
+                    exerciseRepository.deleteAll()
 
-            backup.sessions.forEach { sb ->
-                val session = sb.toDomain() ?: return@forEach
-                // Try update first, insert if not exists
-                try {
-                    sessionRepository.updateSession(session)
-                } catch (_: Exception) {
-                    try { sessionRepository.insertSession(session) } catch (_: Exception) {}
+                    backup.exercises.forEach { eb ->
+                        val exercise = eb.toDomain() ?: return@forEach
+                        exerciseRepository.insertExercise(exercise)
+                        exercisesRestored++
+                    }
+                    backup.sessions.forEach { sb ->
+                        val session = sb.toDomain() ?: return@forEach
+                        sessionRepository.insertSession(session)
+                        sessionsRestored++
+                    }
+                    backup.checkIns.forEach { cb ->
+                        checkInRepository.insertCheckIn(cb.toDomain())
+                        checkInsRestored++
+                    }
                 }
-                sessionsRestored++
-            }
 
-            backup.checkIns.forEach { cb ->
-                val checkIn = cb.toDomain()
-                try {
-                    checkInRepository.updateCheckIn(checkIn)
-                } catch (_: Exception) {
-                    try { checkInRepository.insertCheckIn(checkIn) } catch (_: Exception) {}
+                MergeStrategy.MergeKeepBoth -> {
+                    // INSERT IGNORE — existing rows win, new IDs are added.
+                    backup.exercises.forEach { eb ->
+                        val exercise = eb.toDomain() ?: return@forEach
+                        exerciseRepository.insertExerciseIgnore(exercise)
+                        exercisesRestored++
+                    }
+                    backup.sessions.forEach { sb ->
+                        val session = sb.toDomain() ?: return@forEach
+                        sessionRepository.insertSessionIgnore(session)
+                        sessionsRestored++
+                    }
+                    backup.checkIns.forEach { cb ->
+                        checkInRepository.insertCheckInIgnore(cb.toDomain())
+                        checkInsRestored++
+                    }
                 }
-                checkInsRestored++
+
+                MergeStrategy.MergePreferFile -> {
+                    // Exercises: file wins (upsert).
+                    // Sessions + check-ins: combined (INSERT IGNORE to avoid duplicates).
+                    backup.exercises.forEach { eb ->
+                        val exercise = eb.toDomain() ?: return@forEach
+                        exerciseRepository.upsertExercise(exercise)
+                        exercisesRestored++
+                    }
+                    backup.sessions.forEach { sb ->
+                        val session = sb.toDomain() ?: return@forEach
+                        sessionRepository.insertSessionIgnore(session)
+                        sessionsRestored++
+                    }
+                    backup.checkIns.forEach { cb ->
+                        checkInRepository.insertCheckInIgnore(cb.toDomain())
+                        checkInsRestored++
+                    }
+                }
             }
 
             backup.userSettings?.let { sb ->
-                val settings = sb.toDomain()
-                userSettingsRepository.updateSettings(settings)
+                userSettingsRepository.updateSettings(sb.toDomain())
             }
 
             RestoreResult.Success(exercisesRestored, sessionsRestored, checkInsRestored)
