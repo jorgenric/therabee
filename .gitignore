@@ -4,7 +4,10 @@
 /local.properties
 /.idea
 .DS_Store
-/build
+
+# Build output — matches app/build/, build/, any nested build/ directory
+build/
+
 /captures
 .externalNativeBuild
 .cxx
@@ -14,14 +17,22 @@ local.properties
 *.apk
 *.aab
 *.ap_
+*.dex
 
 # Keystore / signing — never commit these
 *.jks
 *.keystore
 keystore.properties
 
-# KSP / annotation processor generated sources
-build/generated/
+# Kotlin incremental compilation cache
+*.tab
+*.tab.values.at
+*.tab.keystream
+*.tab.keystream.len
+*.tab.len
+*.tab_i
+*.bin
+*.at
 
 # Profiling and benchmark artifacts
 *.trace

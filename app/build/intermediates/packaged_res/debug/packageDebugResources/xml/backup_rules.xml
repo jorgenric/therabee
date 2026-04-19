@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<full-backup-content>
-    <include domain="file" path="exercise_images/" />
-    <exclude domain="database" path="therapy_companion.db" />
-</full-backup-content>

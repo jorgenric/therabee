@@ -26,21 +26,41 @@ object DayBits {
         java.time.DayOfWeek.SUNDAY    -> SUN
     }
 
-    /** Parses a CSV days string like "Mon,Wed,Fri" or "Daily" into a bitmask */
+    /** Parses a CSV days string into a bitmask.
+     *
+     *  Accepts:
+     *  - `Daily`, `All`, `Every day`, `Everyday` → all 7 days
+     *  - `Weekdays` → Mon–Fri
+     *  - `Weekends` → Sat–Sun
+     *  - Comma-separated day names, any of:
+     *      Mon / Monday / M
+     *      Tue / Tuesday / Tu
+     *      Wed / Wednesday / W
+     *      Thu / Thursday / Th / R
+     *      Fri / Friday / F
+     *      Sat / Saturday / Sa
+     *      Sun / Sunday / Su
+     */
     fun fromCsvDays(csv: String): Int {
         val trimmed = csv.trim()
-        if (trimmed.equals("daily", ignoreCase = true)) return ALL
+
+        // Whole-value shortcuts
+        if (trimmed.matches(Regex("daily|all|every[\\s\\-]?day|everyday", RegexOption.IGNORE_CASE))) return ALL
+        if (trimmed.equals("weekdays", ignoreCase = true)) return MON or TUE or WED or THU or FRI
+        if (trimmed.equals("weekends", ignoreCase = true)) return SAT or SUN
 
         return trimmed.split(",").fold(0) { acc, day ->
             acc or when (day.trim().lowercase()) {
-                "mon", "monday"    -> MON
-                "tue", "tuesday"   -> TUE
-                "wed", "wednesday" -> WED
-                "thu", "thursday"  -> THU
-                "fri", "friday"    -> FRI
-                "sat", "saturday"  -> SAT
-                "sun", "sunday"    -> SUN
-                else -> throw IllegalArgumentException("Unknown day abbreviation: ${day.trim()}")
+                "mon", "monday", "m"            -> MON
+                "tue", "tuesday", "tu"          -> TUE
+                "wed", "wednesday", "w"         -> WED
+                "thu", "thursday", "th", "r"   -> THU
+                "fri", "friday", "f"            -> FRI
+                "sat", "saturday", "sa"         -> SAT
+                "sun", "sunday", "su"           -> SUN
+                else -> throw IllegalArgumentException(
+                    "Unknown day \"${day.trim()}\". Use Mon/Tue/Wed/Thu/Fri/Sat/Sun (or Daily, Weekdays, Weekends)."
+                )
             }
         }
     }
