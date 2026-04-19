@@ -12,6 +12,9 @@ class SessionRepository(private val dao: SessionDao) {
     fun getAllSessions(): Flow<List<Session>> =
         dao.getAllSessions().map { list -> list.map { it.toDomain() } }
 
+    suspend fun getAllSessionsOnce(): List<Session> =
+        dao.getAllSessionsOnce().map { it.toDomain() }
+
     suspend fun getSessionById(id: String): Session? =
         dao.getSessionById(id)?.toDomain()
 

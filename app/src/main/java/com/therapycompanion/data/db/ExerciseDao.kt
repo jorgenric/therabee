@@ -16,6 +16,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises ORDER BY priority ASC, name ASC")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercises ORDER BY priority ASC, name ASC")
+    suspend fun getAllExercisesOnce(): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercises WHERE active = 1 ORDER BY priority ASC, name ASC")
     fun getActiveExercises(): Flow<List<ExerciseEntity>>
 

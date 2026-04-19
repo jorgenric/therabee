@@ -12,6 +12,9 @@ class CheckInRepository(private val dao: CheckInDao) {
     fun getAllCheckIns(): Flow<List<CheckIn>> =
         dao.getAllCheckIns().map { list -> list.map { it.toDomain() } }
 
+    suspend fun getAllCheckInsOnce(): List<CheckIn> =
+        dao.getAllCheckInsOnce().map { it.toDomain() }
+
     suspend fun getCheckInById(id: String): CheckIn? =
         dao.getCheckInById(id)?.toDomain()
 

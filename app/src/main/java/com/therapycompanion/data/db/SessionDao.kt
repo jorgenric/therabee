@@ -15,6 +15,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions ORDER BY started_at DESC")
     fun getAllSessions(): Flow<List<SessionEntity>>
 
+    @Query("SELECT * FROM sessions ORDER BY started_at DESC")
+    suspend fun getAllSessionsOnce(): List<SessionEntity>
+
     @Query("SELECT * FROM sessions WHERE id = :id")
     suspend fun getSessionById(id: String): SessionEntity?
 

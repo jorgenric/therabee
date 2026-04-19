@@ -17,6 +17,9 @@ class ExerciseRepository(private val dao: ExerciseDao) {
     fun getAllExercises(): Flow<List<Exercise>> =
         dao.getAllExercises().map { list -> list.map { it.toDomain() } }
 
+    suspend fun getAllExercisesOnce(): List<Exercise> =
+        dao.getAllExercisesOnce().map { it.toDomain() }
+
     fun getActiveExercises(): Flow<List<Exercise>> =
         dao.getActiveExercises().map { list -> list.map { it.toDomain() } }
 
