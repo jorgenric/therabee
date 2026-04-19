@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
@@ -47,6 +48,7 @@ import com.therapycompanion.R
 import com.therapycompanion.TherapyCompanionApp
 import com.therapycompanion.data.model.SessionStatus
 import com.therapycompanion.ui.checkin.CheckInBottomSheet
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -68,6 +70,12 @@ fun HomeScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
+    val greeting = when (LocalTime.now().hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+
     // Show check-in bottom sheet when conditions are met.
     if (uiState.showCheckInPrompt) {
         CheckInBottomSheet(
@@ -85,7 +93,7 @@ fun HomeScreen(
                 title = {
                     Column {
                         Text(
-                            text = stringResource(R.string.home_title),
+                            text = greeting,
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
@@ -131,8 +139,35 @@ fun HomeScreen(
                     EmptyTodayState()
                 }
                 else -> {
+                    val completedCount = uiState.todaysExercises.count { it.status == SessionStatus.Completed }
+                    val totalCount = uiState.todaysExercises.size
+                    val nextExercise = uiState.todaysExercises.firstOrNull { it.status == null }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        DailySummary(completed = completedCount, total = totalCount)
+
+                        if (nextExercise != null) {
+                            Button(
+                                onClick = { onStartSession(nextExercise.exercise.id) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Filled.PlayArrow,
+                                    contentDescription = null
+                                )
+                                Spacer(Modifier.size(8.dp))
+                                Text("Start: ${nextExercise.exercise.name}")
+                            }
+                        }
+                    }
+
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.todaysExercises, key = { it.exercise.id }) { item ->
@@ -264,6 +299,20 @@ private fun ExerciseCard(
             }
         }
     }
+}
+
+@Composable
+private fun DailySummary(completed: Int, total: Int) {
+    val message = when {
+        completed == 0 -> "You have $total exercise${if (total == 1) "" else "s"} today."
+        completed == total -> "All done for today — great work!"
+        else -> "$completed of $total done today — keep it going!"
+    }
+    Text(
+        text = message,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
