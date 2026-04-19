@@ -187,6 +187,70 @@ public class CheckInDao_Impl(
     }
   }
 
+  public override suspend fun getAllCheckInsOnce(): List<CheckInEntity> {
+    val _sql: String = "SELECT * FROM check_ins ORDER BY checked_in_at DESC"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
+        val _columnIndexOfCheckedInAt: Int = getColumnIndexOrThrow(_stmt, "checked_in_at")
+        val _columnIndexOfPainScore: Int = getColumnIndexOrThrow(_stmt, "pain_score")
+        val _columnIndexOfEnergyScore: Int = getColumnIndexOrThrow(_stmt, "energy_score")
+        val _columnIndexOfBpiDomain: Int = getColumnIndexOrThrow(_stmt, "bpi_domain")
+        val _columnIndexOfBpiScore: Int = getColumnIndexOrThrow(_stmt, "bpi_score")
+        val _columnIndexOfFreeText: Int = getColumnIndexOrThrow(_stmt, "free_text")
+        val _columnIndexOfDismissed: Int = getColumnIndexOrThrow(_stmt, "dismissed")
+        val _result: MutableList<CheckInEntity> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: CheckInEntity
+          val _tmpId: String
+          _tmpId = _stmt.getText(_columnIndexOfId)
+          val _tmpCheckedInAt: Long
+          _tmpCheckedInAt = _stmt.getLong(_columnIndexOfCheckedInAt)
+          val _tmpPainScore: Int?
+          if (_stmt.isNull(_columnIndexOfPainScore)) {
+            _tmpPainScore = null
+          } else {
+            _tmpPainScore = _stmt.getLong(_columnIndexOfPainScore).toInt()
+          }
+          val _tmpEnergyScore: Int?
+          if (_stmt.isNull(_columnIndexOfEnergyScore)) {
+            _tmpEnergyScore = null
+          } else {
+            _tmpEnergyScore = _stmt.getLong(_columnIndexOfEnergyScore).toInt()
+          }
+          val _tmpBpiDomain: String?
+          if (_stmt.isNull(_columnIndexOfBpiDomain)) {
+            _tmpBpiDomain = null
+          } else {
+            _tmpBpiDomain = _stmt.getText(_columnIndexOfBpiDomain)
+          }
+          val _tmpBpiScore: Int?
+          if (_stmt.isNull(_columnIndexOfBpiScore)) {
+            _tmpBpiScore = null
+          } else {
+            _tmpBpiScore = _stmt.getLong(_columnIndexOfBpiScore).toInt()
+          }
+          val _tmpFreeText: String?
+          if (_stmt.isNull(_columnIndexOfFreeText)) {
+            _tmpFreeText = null
+          } else {
+            _tmpFreeText = _stmt.getText(_columnIndexOfFreeText)
+          }
+          val _tmpDismissed: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_columnIndexOfDismissed).toInt()
+          _tmpDismissed = _tmp != 0
+          _item = CheckInEntity(_tmpId,_tmpCheckedInAt,_tmpPainScore,_tmpEnergyScore,_tmpBpiDomain,_tmpBpiScore,_tmpFreeText,_tmpDismissed)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public override suspend fun getCheckInById(id: String): CheckInEntity? {
     val _sql: String = "SELECT * FROM check_ins WHERE id = ?"
     return performSuspending(__db, true, false) { _connection ->

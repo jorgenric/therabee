@@ -210,6 +210,20 @@ fun SettingsScreen(
                 Divider()
             }
 
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_show_streaks)) },
+                    supportingContent = { Text("Show your consecutive-day exercise streak on Progress") },
+                    trailingContent = {
+                        Switch(
+                            checked = settings.showStreaks,
+                            onCheckedChange = viewModel::updateShowStreaks
+                        )
+                    }
+                )
+                Divider()
+            }
+
             // ── Import / Backup ────────────────────────────────────────────
             item { SectionHeader("Data") }
             item {

@@ -80,7 +80,8 @@ data class UserSettingsBackup(
     val eveningEncouragementTime: String,
     val quietHoursStart: String?,
     val quietHoursEnd: String?,
-    val checkInsEnabled: Boolean
+    val checkInsEnabled: Boolean,
+    val showStreaks: Boolean = false   // default preserves backward compat with old backups
 )
 
 object JsonExporter {
@@ -128,6 +129,6 @@ object JsonExporter {
     private fun UserSettings.toBackup() = UserSettingsBackup(
         dailyLoad, easierDayEnabled, morningReminderEnabled, morningReminderTime,
         afternoonCheckInEnabled, afternoonCheckInTime, eveningEncouragementEnabled,
-        eveningEncouragementTime, quietHoursStart, quietHoursEnd, checkInsEnabled
+        eveningEncouragementTime, quietHoursStart, quietHoursEnd, checkInsEnabled, showStreaks
     )
 }

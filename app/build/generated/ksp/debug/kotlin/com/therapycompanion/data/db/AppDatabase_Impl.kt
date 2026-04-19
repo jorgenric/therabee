@@ -44,7 +44,7 @@ public class AppDatabase_Impl : AppDatabase() {
   }
 
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(2, "7eb0abd790289bbbc01cfa2a0db2018e", "dc08e0a79b8c465724499468fa952966") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(3, "bcdd76653c9afdf5ac15b55d29999bb2", "d0aec61519b58f9c4be1d9f1a484bd59") {
       public override fun createAllTables(connection: SQLiteConnection) {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `exercises` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `body_system` TEXT NOT NULL, `instructions` TEXT NOT NULL, `notes` TEXT, `duration_minutes` INTEGER NOT NULL, `frequency` TEXT NOT NULL, `scheduled_days` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `active` INTEGER NOT NULL, `image_file_name` TEXT, `video_file_name` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `sessions` (`id` TEXT NOT NULL, `exercise_id` TEXT NOT NULL, `started_at` INTEGER NOT NULL, `completed_at` INTEGER, `elapsed_seconds` INTEGER NOT NULL, `status` TEXT NOT NULL, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`exercise_id`) REFERENCES `exercises`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
@@ -53,9 +53,9 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_sessions_status` ON `sessions` (`status`)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `check_ins` (`id` TEXT NOT NULL, `checked_in_at` INTEGER NOT NULL, `pain_score` INTEGER, `energy_score` INTEGER, `bpi_domain` TEXT, `bpi_score` INTEGER, `free_text` TEXT, `dismissed` INTEGER NOT NULL, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_check_ins_checked_in_at` ON `check_ins` (`checked_in_at`)")
-        connection.execSQL("CREATE TABLE IF NOT EXISTS `user_settings` (`id` INTEGER NOT NULL, `daily_load` INTEGER NOT NULL, `easier_day_enabled` INTEGER NOT NULL, `morning_reminder_enabled` INTEGER NOT NULL, `morning_reminder_time` TEXT NOT NULL, `afternoon_check_in_enabled` INTEGER NOT NULL, `afternoon_check_in_time` TEXT NOT NULL, `evening_encouragement_enabled` INTEGER NOT NULL, `evening_encouragement_time` TEXT NOT NULL, `quiet_hours_start` TEXT, `quiet_hours_end` TEXT, `check_ins_enabled` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `user_settings` (`id` INTEGER NOT NULL, `daily_load` INTEGER NOT NULL, `easier_day_enabled` INTEGER NOT NULL, `morning_reminder_enabled` INTEGER NOT NULL, `morning_reminder_time` TEXT NOT NULL, `afternoon_check_in_enabled` INTEGER NOT NULL, `afternoon_check_in_time` TEXT NOT NULL, `evening_encouragement_enabled` INTEGER NOT NULL, `evening_encouragement_time` TEXT NOT NULL, `quiet_hours_start` TEXT, `quiet_hours_end` TEXT, `check_ins_enabled` INTEGER NOT NULL, `show_streaks` INTEGER NOT NULL, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7eb0abd790289bbbc01cfa2a0db2018e')")
+        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bcdd76653c9afdf5ac15b55d29999bb2')")
       }
 
       public override fun dropAllTables(connection: SQLiteConnection) {
@@ -170,6 +170,7 @@ public class AppDatabase_Impl : AppDatabase() {
         _columnsUserSettings.put("quiet_hours_start", TableInfo.Column("quiet_hours_start", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsUserSettings.put("quiet_hours_end", TableInfo.Column("quiet_hours_end", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsUserSettings.put("check_ins_enabled", TableInfo.Column("check_ins_enabled", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsUserSettings.put("show_streaks", TableInfo.Column("show_streaks", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         val _foreignKeysUserSettings: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
         val _indicesUserSettings: MutableSet<TableInfo.Index> = mutableSetOf()
         val _infoUserSettings: TableInfo = TableInfo("user_settings", _columnsUserSettings, _foreignKeysUserSettings, _indicesUserSettings)

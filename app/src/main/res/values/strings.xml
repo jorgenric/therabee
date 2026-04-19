@@ -53,6 +53,7 @@
     <string name="settings_afternoon_checkin">Afternoon check-in prompt</string>
     <string name="settings_evening_encouragement">Evening encouragement</string>
     <string name="settings_check_ins_enabled">Pain and energy check-ins</string>
+    <string name="settings_show_streaks">Show exercise streak</string>
     <string name="settings_import_exercises">Import exercises from spreadsheet</string>
     <string name="settings_export_backup">Export backup</string>
     <string name="settings_restore_backup">Restore from backup</string>

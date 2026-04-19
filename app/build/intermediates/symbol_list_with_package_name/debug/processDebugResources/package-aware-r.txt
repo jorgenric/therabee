@@ -333,8 +333,11 @@ string settings_afternoon_checkin
 string settings_backup_note
 string settings_check_ins_enabled
 string settings_evening_encouragement
+string settings_export_backup
 string settings_import_exercises
 string settings_morning_reminder
+string settings_restore_backup
+string settings_show_streaks
 string settings_title
 string status_bar_notification_info_overflow
 string switch_role

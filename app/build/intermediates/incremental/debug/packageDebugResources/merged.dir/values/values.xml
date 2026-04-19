@@ -72,8 +72,11 @@
     <string name="settings_backup_note">Exercise photos are stored on this device only and are not included in backup files.</string>
     <string name="settings_check_ins_enabled">Pain and energy check-ins</string>
     <string name="settings_evening_encouragement">Evening encouragement</string>
+    <string name="settings_export_backup">Export backup</string>
     <string name="settings_import_exercises">Import exercises from spreadsheet</string>
     <string name="settings_morning_reminder">Morning reminder</string>
+    <string name="settings_restore_backup">Restore from backup</string>
+    <string name="settings_show_streaks">Show exercise streak</string>
     <string name="settings_title">Settings</string>
     <style name="Theme.TherapyCompanion" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>

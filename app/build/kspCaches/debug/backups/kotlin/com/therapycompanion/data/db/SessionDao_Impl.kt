@@ -135,6 +135,53 @@ public class SessionDao_Impl(
     }
   }
 
+  public override suspend fun getAllSessionsOnce(): List<SessionEntity> {
+    val _sql: String = "SELECT * FROM sessions ORDER BY started_at DESC"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
+        val _columnIndexOfExerciseId: Int = getColumnIndexOrThrow(_stmt, "exercise_id")
+        val _columnIndexOfStartedAt: Int = getColumnIndexOrThrow(_stmt, "started_at")
+        val _columnIndexOfCompletedAt: Int = getColumnIndexOrThrow(_stmt, "completed_at")
+        val _columnIndexOfElapsedSeconds: Int = getColumnIndexOrThrow(_stmt, "elapsed_seconds")
+        val _columnIndexOfStatus: Int = getColumnIndexOrThrow(_stmt, "status")
+        val _columnIndexOfNotes: Int = getColumnIndexOrThrow(_stmt, "notes")
+        val _result: MutableList<SessionEntity> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: SessionEntity
+          val _tmpId: String
+          _tmpId = _stmt.getText(_columnIndexOfId)
+          val _tmpExerciseId: String
+          _tmpExerciseId = _stmt.getText(_columnIndexOfExerciseId)
+          val _tmpStartedAt: Long
+          _tmpStartedAt = _stmt.getLong(_columnIndexOfStartedAt)
+          val _tmpCompletedAt: Long?
+          if (_stmt.isNull(_columnIndexOfCompletedAt)) {
+            _tmpCompletedAt = null
+          } else {
+            _tmpCompletedAt = _stmt.getLong(_columnIndexOfCompletedAt)
+          }
+          val _tmpElapsedSeconds: Long
+          _tmpElapsedSeconds = _stmt.getLong(_columnIndexOfElapsedSeconds)
+          val _tmpStatus: String
+          _tmpStatus = _stmt.getText(_columnIndexOfStatus)
+          val _tmpNotes: String?
+          if (_stmt.isNull(_columnIndexOfNotes)) {
+            _tmpNotes = null
+          } else {
+            _tmpNotes = _stmt.getText(_columnIndexOfNotes)
+          }
+          _item = SessionEntity(_tmpId,_tmpExerciseId,_tmpStartedAt,_tmpCompletedAt,_tmpElapsedSeconds,_tmpStatus,_tmpNotes)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public override suspend fun getSessionById(id: String): SessionEntity? {
     val _sql: String = "SELECT * FROM sessions WHERE id = ?"
     return performSuspending(__db, true, false) { _connection ->

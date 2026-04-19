@@ -55,7 +55,12 @@ fun ProgressScreen(contentPadding: PaddingValues) {
     val context = LocalContext.current
     val app = context.applicationContext as TherapyCompanionApp
     val viewModel: ProgressViewModel = viewModel(
-        factory = ProgressViewModel.Factory(app.sessionRepository, app.checkInRepository, app.exerciseRepository)
+        factory = ProgressViewModel.Factory(
+            app.sessionRepository,
+            app.checkInRepository,
+            app.exerciseRepository,
+            app.userSettingsRepository
+        )
     )
     val uiState by viewModel.uiState.collectAsState()
 
@@ -88,6 +93,13 @@ fun ProgressScreen(contentPadding: PaddingValues) {
                         onPreviousMonth = { viewModel.selectMonth(uiState.selectedMonth.minusMonths(1)) },
                         onNextMonth = { viewModel.selectMonth(uiState.selectedMonth.plusMonths(1)) }
                     )
+                }
+
+                // ── Streak (only when enabled in Settings) ───────────────
+                if (uiState.showStreaks && uiState.currentStreak > 0) {
+                    item {
+                        StreakBadge(streak = uiState.currentStreak)
+                    }
                 }
 
                 // ── Body system coverage ──────────────────────────────────
@@ -204,6 +216,34 @@ private fun CalendarSection(
                     }
                 }
             }
+        }
+    }
+}
+
+// ── Streak badge ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun StreakBadge(streak: Int) {
+    val days = if (streak == 1) "day" else "days"
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "🔥",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Column {
+            Text(
+                text = "$streak $days in a row",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Keep it going — one day at a time.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

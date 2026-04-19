@@ -30,7 +30,7 @@ public class UserSettingsDao_Impl(
   init {
     this.__db = __db
     this.__insertAdapterOfUserSettingsEntity = object : EntityInsertAdapter<UserSettingsEntity>() {
-      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `user_settings` (`id`,`daily_load`,`easier_day_enabled`,`morning_reminder_enabled`,`morning_reminder_time`,`afternoon_check_in_enabled`,`afternoon_check_in_time`,`evening_encouragement_enabled`,`evening_encouragement_time`,`quiet_hours_start`,`quiet_hours_end`,`check_ins_enabled`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `user_settings` (`id`,`daily_load`,`easier_day_enabled`,`morning_reminder_enabled`,`morning_reminder_time`,`afternoon_check_in_enabled`,`afternoon_check_in_time`,`evening_encouragement_enabled`,`evening_encouragement_time`,`quiet_hours_start`,`quiet_hours_end`,`check_ins_enabled`,`show_streaks`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: UserSettingsEntity) {
         statement.bindLong(1, entity.id.toLong())
@@ -60,10 +60,12 @@ public class UserSettingsDao_Impl(
         }
         val _tmp_4: Int = if (entity.checkInsEnabled) 1 else 0
         statement.bindLong(12, _tmp_4.toLong())
+        val _tmp_5: Int = if (entity.showStreaks) 1 else 0
+        statement.bindLong(13, _tmp_5.toLong())
       }
     }
     this.__updateAdapterOfUserSettingsEntity = object : EntityDeleteOrUpdateAdapter<UserSettingsEntity>() {
-      protected override fun createQuery(): String = "UPDATE OR ABORT `user_settings` SET `id` = ?,`daily_load` = ?,`easier_day_enabled` = ?,`morning_reminder_enabled` = ?,`morning_reminder_time` = ?,`afternoon_check_in_enabled` = ?,`afternoon_check_in_time` = ?,`evening_encouragement_enabled` = ?,`evening_encouragement_time` = ?,`quiet_hours_start` = ?,`quiet_hours_end` = ?,`check_ins_enabled` = ? WHERE `id` = ?"
+      protected override fun createQuery(): String = "UPDATE OR ABORT `user_settings` SET `id` = ?,`daily_load` = ?,`easier_day_enabled` = ?,`morning_reminder_enabled` = ?,`morning_reminder_time` = ?,`afternoon_check_in_enabled` = ?,`afternoon_check_in_time` = ?,`evening_encouragement_enabled` = ?,`evening_encouragement_time` = ?,`quiet_hours_start` = ?,`quiet_hours_end` = ?,`check_ins_enabled` = ?,`show_streaks` = ? WHERE `id` = ?"
 
       protected override fun bind(statement: SQLiteStatement, entity: UserSettingsEntity) {
         statement.bindLong(1, entity.id.toLong())
@@ -93,7 +95,9 @@ public class UserSettingsDao_Impl(
         }
         val _tmp_4: Int = if (entity.checkInsEnabled) 1 else 0
         statement.bindLong(12, _tmp_4.toLong())
-        statement.bindLong(13, entity.id.toLong())
+        val _tmp_5: Int = if (entity.showStreaks) 1 else 0
+        statement.bindLong(13, _tmp_5.toLong())
+        statement.bindLong(14, entity.id.toLong())
       }
     }
   }
@@ -123,6 +127,7 @@ public class UserSettingsDao_Impl(
         val _columnIndexOfQuietHoursStart: Int = getColumnIndexOrThrow(_stmt, "quiet_hours_start")
         val _columnIndexOfQuietHoursEnd: Int = getColumnIndexOrThrow(_stmt, "quiet_hours_end")
         val _columnIndexOfCheckInsEnabled: Int = getColumnIndexOrThrow(_stmt, "check_ins_enabled")
+        val _columnIndexOfShowStreaks: Int = getColumnIndexOrThrow(_stmt, "show_streaks")
         val _result: UserSettingsEntity?
         if (_stmt.step()) {
           val _tmpId: Int
@@ -167,7 +172,11 @@ public class UserSettingsDao_Impl(
           val _tmp_4: Int
           _tmp_4 = _stmt.getLong(_columnIndexOfCheckInsEnabled).toInt()
           _tmpCheckInsEnabled = _tmp_4 != 0
-          _result = UserSettingsEntity(_tmpId,_tmpDailyLoad,_tmpEasierDayEnabled,_tmpMorningReminderEnabled,_tmpMorningReminderTime,_tmpAfternoonCheckInEnabled,_tmpAfternoonCheckInTime,_tmpEveningEncouragementEnabled,_tmpEveningEncouragementTime,_tmpQuietHoursStart,_tmpQuietHoursEnd,_tmpCheckInsEnabled)
+          val _tmpShowStreaks: Boolean
+          val _tmp_5: Int
+          _tmp_5 = _stmt.getLong(_columnIndexOfShowStreaks).toInt()
+          _tmpShowStreaks = _tmp_5 != 0
+          _result = UserSettingsEntity(_tmpId,_tmpDailyLoad,_tmpEasierDayEnabled,_tmpMorningReminderEnabled,_tmpMorningReminderTime,_tmpAfternoonCheckInEnabled,_tmpAfternoonCheckInTime,_tmpEveningEncouragementEnabled,_tmpEveningEncouragementTime,_tmpQuietHoursStart,_tmpQuietHoursEnd,_tmpCheckInsEnabled,_tmpShowStreaks)
         } else {
           _result = null
         }
@@ -195,6 +204,7 @@ public class UserSettingsDao_Impl(
         val _columnIndexOfQuietHoursStart: Int = getColumnIndexOrThrow(_stmt, "quiet_hours_start")
         val _columnIndexOfQuietHoursEnd: Int = getColumnIndexOrThrow(_stmt, "quiet_hours_end")
         val _columnIndexOfCheckInsEnabled: Int = getColumnIndexOrThrow(_stmt, "check_ins_enabled")
+        val _columnIndexOfShowStreaks: Int = getColumnIndexOrThrow(_stmt, "show_streaks")
         val _result: UserSettingsEntity?
         if (_stmt.step()) {
           val _tmpId: Int
@@ -239,7 +249,11 @@ public class UserSettingsDao_Impl(
           val _tmp_4: Int
           _tmp_4 = _stmt.getLong(_columnIndexOfCheckInsEnabled).toInt()
           _tmpCheckInsEnabled = _tmp_4 != 0
-          _result = UserSettingsEntity(_tmpId,_tmpDailyLoad,_tmpEasierDayEnabled,_tmpMorningReminderEnabled,_tmpMorningReminderTime,_tmpAfternoonCheckInEnabled,_tmpAfternoonCheckInTime,_tmpEveningEncouragementEnabled,_tmpEveningEncouragementTime,_tmpQuietHoursStart,_tmpQuietHoursEnd,_tmpCheckInsEnabled)
+          val _tmpShowStreaks: Boolean
+          val _tmp_5: Int
+          _tmp_5 = _stmt.getLong(_columnIndexOfShowStreaks).toInt()
+          _tmpShowStreaks = _tmp_5 != 0
+          _result = UserSettingsEntity(_tmpId,_tmpDailyLoad,_tmpEasierDayEnabled,_tmpMorningReminderEnabled,_tmpMorningReminderTime,_tmpAfternoonCheckInEnabled,_tmpAfternoonCheckInTime,_tmpEveningEncouragementEnabled,_tmpEveningEncouragementTime,_tmpQuietHoursStart,_tmpQuietHoursEnd,_tmpCheckInsEnabled,_tmpShowStreaks)
         } else {
           _result = null
         }

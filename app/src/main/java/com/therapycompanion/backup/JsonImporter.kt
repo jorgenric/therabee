@@ -161,6 +161,7 @@ object JsonImporter {
         eveningEncouragementTime = eveningEncouragementTime,
         quietHoursStart = quietHoursStart,
         quietHoursEnd = quietHoursEnd,
-        checkInsEnabled = checkInsEnabled
+        checkInsEnabled = checkInsEnabled,
+        showStreaks = showStreaks
     )
 }

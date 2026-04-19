@@ -63,6 +63,7 @@ class SettingsViewModel(
     fun updateQuietHoursStart(time: String?) = save(_uiState.value.settings.copy(quietHoursStart = time))
     fun updateQuietHoursEnd(time: String?) = save(_uiState.value.settings.copy(quietHoursEnd = time))
     fun updateCheckInsEnabled(enabled: Boolean) = save(_uiState.value.settings.copy(checkInsEnabled = enabled))
+    fun updateShowStreaks(enabled: Boolean) = save(_uiState.value.settings.copy(showStreaks = enabled))
 
     /**
      * Writes a full JSON backup to the URI provided by the system file picker.

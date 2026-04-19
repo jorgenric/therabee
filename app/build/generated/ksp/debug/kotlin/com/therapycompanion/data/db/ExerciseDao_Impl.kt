@@ -248,6 +248,80 @@ public class ExerciseDao_Impl(
     }
   }
 
+  public override suspend fun getAllExercisesOnce(): List<ExerciseEntity> {
+    val _sql: String = "SELECT * FROM exercises ORDER BY priority ASC, name ASC"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
+        val _columnIndexOfName: Int = getColumnIndexOrThrow(_stmt, "name")
+        val _columnIndexOfBodySystem: Int = getColumnIndexOrThrow(_stmt, "body_system")
+        val _columnIndexOfInstructions: Int = getColumnIndexOrThrow(_stmt, "instructions")
+        val _columnIndexOfNotes: Int = getColumnIndexOrThrow(_stmt, "notes")
+        val _columnIndexOfDurationMinutes: Int = getColumnIndexOrThrow(_stmt, "duration_minutes")
+        val _columnIndexOfFrequency: Int = getColumnIndexOrThrow(_stmt, "frequency")
+        val _columnIndexOfScheduledDays: Int = getColumnIndexOrThrow(_stmt, "scheduled_days")
+        val _columnIndexOfPriority: Int = getColumnIndexOrThrow(_stmt, "priority")
+        val _columnIndexOfActive: Int = getColumnIndexOrThrow(_stmt, "active")
+        val _columnIndexOfImageFileName: Int = getColumnIndexOrThrow(_stmt, "image_file_name")
+        val _columnIndexOfVideoFileName: Int = getColumnIndexOrThrow(_stmt, "video_file_name")
+        val _columnIndexOfCreatedAt: Int = getColumnIndexOrThrow(_stmt, "created_at")
+        val _columnIndexOfUpdatedAt: Int = getColumnIndexOrThrow(_stmt, "updated_at")
+        val _result: MutableList<ExerciseEntity> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: ExerciseEntity
+          val _tmpId: String
+          _tmpId = _stmt.getText(_columnIndexOfId)
+          val _tmpName: String
+          _tmpName = _stmt.getText(_columnIndexOfName)
+          val _tmpBodySystem: String
+          _tmpBodySystem = _stmt.getText(_columnIndexOfBodySystem)
+          val _tmpInstructions: String
+          _tmpInstructions = _stmt.getText(_columnIndexOfInstructions)
+          val _tmpNotes: String?
+          if (_stmt.isNull(_columnIndexOfNotes)) {
+            _tmpNotes = null
+          } else {
+            _tmpNotes = _stmt.getText(_columnIndexOfNotes)
+          }
+          val _tmpDurationMinutes: Int
+          _tmpDurationMinutes = _stmt.getLong(_columnIndexOfDurationMinutes).toInt()
+          val _tmpFrequency: String
+          _tmpFrequency = _stmt.getText(_columnIndexOfFrequency)
+          val _tmpScheduledDays: Int
+          _tmpScheduledDays = _stmt.getLong(_columnIndexOfScheduledDays).toInt()
+          val _tmpPriority: Int
+          _tmpPriority = _stmt.getLong(_columnIndexOfPriority).toInt()
+          val _tmpActive: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_columnIndexOfActive).toInt()
+          _tmpActive = _tmp != 0
+          val _tmpImageFileName: String?
+          if (_stmt.isNull(_columnIndexOfImageFileName)) {
+            _tmpImageFileName = null
+          } else {
+            _tmpImageFileName = _stmt.getText(_columnIndexOfImageFileName)
+          }
+          val _tmpVideoFileName: String?
+          if (_stmt.isNull(_columnIndexOfVideoFileName)) {
+            _tmpVideoFileName = null
+          } else {
+            _tmpVideoFileName = _stmt.getText(_columnIndexOfVideoFileName)
+          }
+          val _tmpCreatedAt: Long
+          _tmpCreatedAt = _stmt.getLong(_columnIndexOfCreatedAt)
+          val _tmpUpdatedAt: Long
+          _tmpUpdatedAt = _stmt.getLong(_columnIndexOfUpdatedAt)
+          _item = ExerciseEntity(_tmpId,_tmpName,_tmpBodySystem,_tmpInstructions,_tmpNotes,_tmpDurationMinutes,_tmpFrequency,_tmpScheduledDays,_tmpPriority,_tmpActive,_tmpImageFileName,_tmpVideoFileName,_tmpCreatedAt,_tmpUpdatedAt)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public override fun getActiveExercises(): Flow<List<ExerciseEntity>> {
     val _sql: String = "SELECT * FROM exercises WHERE active = 1 ORDER BY priority ASC, name ASC"
     return createFlow(__db, false, arrayOf("exercises")) { _connection ->

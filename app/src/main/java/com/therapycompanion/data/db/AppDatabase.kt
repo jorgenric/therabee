@@ -25,7 +25,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CheckInEntity::class,
         UserSettingsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -57,13 +57,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Version 2 → 3: adds show_streaks to user_settings.
+         * DEFAULT 0 ensures the existing row is set to false (off by default).
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE user_settings ADD COLUMN show_streaks INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         private fun buildDatabase(context: Context): AppDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 DATABASE_NAME
             )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 }

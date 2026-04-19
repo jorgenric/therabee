@@ -61,5 +61,9 @@ data class UserSettingsEntity(
 
     /** Master toggle for the FPS-R check-in feature */
     @ColumnInfo(name = "check_ins_enabled")
-    val checkInsEnabled: Boolean = true
+    val checkInsEnabled: Boolean = true,
+
+    /** When true, a consecutive-day streak (with one grace day) is shown on the Progress screen */
+    @ColumnInfo(name = "show_streaks")
+    val showStreaks: Boolean = false
 )
