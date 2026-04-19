@@ -10,6 +10,7 @@ import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
 import com.therapycompanion.data.repository.UserSettingsRepository
+import com.therapycompanion.domain.scheduler.DailyScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,11 @@ data class ProgressUiState(
     /** Consecutive-day streak (with one grace day allowed). 0 = no streak. */
     val currentStreak: Int = 0,
     /** Mirrors UserSettings.showStreaks — drives streak widget visibility. */
-    val showStreaks: Boolean = false
+    val showStreaks: Boolean = false,
+    /** Count of completed sessions in the current Mon–Sun week. */
+    val exercisesThisWeek: Int = 0,
+    /** exerciseId → name lookup for the session history log. */
+    val exerciseNamesById: Map<String, String> = emptyMap()
 )
 
 class ProgressViewModel(
@@ -67,10 +72,20 @@ class ProgressViewModel(
             // Load a full year for the calendar and streak — same query, wider window.
             val oneYearAgo     = now - 365L * 24 * 3600 * 1000
 
+            val today     = LocalDate.now()
+            val weekStart = DailyScheduler.currentWeekStart(today, zoneId)
+
             val sessions  = sessionRepository.getSessionsInDateRange(oneYearAgo, now)
             val checkIns  = checkInRepository.getCheckInsInDateRange(thirtyDaysAgo, now)
             val covered   = sessionRepository.getCompletedBodySystemsSince(sevenDaysAgo).toSet()
-            val streak    = computeStreak(sessions, LocalDate.now())
+            val streak    = computeStreak(sessions, today)
+
+            val exercisesThisWeek = sessions.count {
+                it.status == SessionStatus.Completed && it.startedAt >= weekStart
+            }
+
+            val exerciseNames = exerciseRepository.getAllExercisesOnce()
+                .associate { it.id to it.name }
 
             _uiState.update {
                 it.copy(
@@ -78,6 +93,8 @@ class ProgressViewModel(
                     checkIns = checkIns,
                     coveredBodySystems = covered,
                     currentStreak = streak,
+                    exercisesThisWeek = exercisesThisWeek,
+                    exerciseNamesById = exerciseNames,
                     isLoading = false
                 )
             }

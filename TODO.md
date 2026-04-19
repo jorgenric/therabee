@@ -12,21 +12,6 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 
 ---
 
-## §5.3 Session Screen
-
-- [x] **Fix X / Close button** — calls `cancelSession()` which deletes the InProgress record; returns Home with no session written.
-- [x] **Full-screen acknowledgment after Done** — `AcknowledgmentScreen` composable shown in-place when `showAcknowledgment = true`; shows exercise name + encouragement message.
-- [x] **"Next up: [exercise]" prompt** — `findNextExercise()` in SessionViewModel queries highest-priority incomplete exercise for today; "Start now" button navigates directly into next session.
-
----
-
-## §5.4 Progress Screen
-
-- [ ] **"Exercises this week: N" summary stat** — a simple count with positive framing at the top of the screen, above the calendar.
-- [ ] **Session history log** — scrollable list of past sessions (date, exercise name, elapsed duration, status) below the trend chart.
-
----
-
 ## §5.5 Settings Screen
 
 - [ ] **Display name / greeting name** — text field so users can set the name used in the Home greeting. Requires adding a `displayName` column to `UserSettings` → Room DB migration v3 → v4.
@@ -37,5 +22,7 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 ## Completed
 
 - [x] §5.2 Library screen — search bar, filter chips (body system + "Not done recently"), groups collapsed by default
+- [x] §5.3 Session screen — close/X acts as pause (deletes InProgress record, no skip written), full-screen acknowledgment after Done, "Next up" prompt with Start now button
+- [x] §5.4 Progress screen — "Exercises this week" count with positive framing above the calendar; session history log (date, name, duration, Done/Skipped) below the trend chart
 - [x] §6 Exercise CSV import — parsing, validation, comment stripping, frequency/days/priority aliases, encoding auto-detection, template export
 - [x] §10 Backup, restore & update safety — JSON export (share-sheet + file picker), three-strategy restore, weekly auto-backup with 4-file rolling retention, 14-day reminder banner, reset progress, session + check-in CSV export
