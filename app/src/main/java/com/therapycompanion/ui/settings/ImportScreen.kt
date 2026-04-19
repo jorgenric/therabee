@@ -69,6 +69,31 @@ fun ImportScreen(onBack: () -> Unit) {
 
     var importState by remember { mutableStateOf<ImportState>(ImportState.Idle) }
 
+    // Template: let the user pick where to save it via the system file picker.
+    val templateSaveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch(Dispatchers.IO) {
+            val tmpFile = CsvImporter.exportTemplate(context)
+            if (tmpFile != null) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        tmpFile.inputStream().use { it.copyTo(out) }
+                    }
+                    tmpFile.delete()
+                    withContext(Dispatchers.Main) {
+                        snackbarState.showSnackbar("Template saved.")
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        snackbarState.showSnackbar("Could not save template: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -124,16 +149,7 @@ fun ImportScreen(onBack: () -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                val file = CsvImporter.exportTemplate(context)
-                                withContext(Dispatchers.Main) {
-                                    if (file != null) {
-                                        snackbarState.showSnackbar("Template saved: ${file.name}")
-                                    }
-                                }
-                            }
-                        },
+                        onClick = { templateSaveLauncher.launch("exercise_import_template.csv") },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.import_download_template))

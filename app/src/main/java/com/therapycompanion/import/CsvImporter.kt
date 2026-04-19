@@ -5,8 +5,6 @@ import android.net.Uri
 import com.therapycompanion.data.model.DayBits
 import com.therapycompanion.data.model.Exercise
 import com.therapycompanion.data.model.Frequency
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.util.UUID
 
@@ -69,14 +67,12 @@ object CsvImporter {
             val stream = context.contentResolver.openInputStream(uri)
                 ?: return ImportResult.FileError("Could not open file")
 
-            // Verify UTF-8 encoding
             val bytes = stream.readBytes()
-            if (!isUtf8(bytes)) {
-                return ImportResult.FileError("File must be UTF-8 encoded. Please save your spreadsheet as UTF-8 CSV and try again.")
-            }
-
-            val text = bytes.toString(Charsets.UTF_8)
-            val lines = text.lines().filter { it.isNotBlank() }
+            val text = decodeBytes(bytes)
+                ?: return ImportResult.FileError(
+                    "Could not decode file. Save your spreadsheet as UTF-8 CSV and try again."
+                )
+            val lines = text.lines().filter { it.isNotBlank() && !it.trimStart().startsWith("#") }
 
             if (lines.isEmpty()) return ImportResult.FileError("File is empty.")
 
@@ -126,10 +122,19 @@ object CsvImporter {
         return try {
             val file = java.io.File(context.filesDir, "exercise_import_template.csv")
             file.writeText(buildString {
-                appendLine("# body_system accepts any descriptive label (e.g. Respiratory, Lower Extremity, Core).")
-                appendLine("# There is no fixed list — any non-empty value up to 100 characters is accepted.")
+                appendLine("# body_system: any label you like (e.g. Respiratory, Lower Extremity, Core). No fixed list.")
+                appendLine("# duration: whole or decimal minutes — 5, 7.5, 10 (decimals rounded up)")
+                appendLine("# frequency: Daily | 3xWeek | 2xWeek | AsTolerated | Weekly")
+                appendLine("#   also accepted: 3x/Week, twice a week, as tolerated, once a week, every day, etc.")
+                appendLine("# days: Daily | Weekdays | Weekends | or comma-separated: Mon,Wed,Fri")
+                appendLine("#   abbreviations: M Tu W Th F Sa Su  (or full names: Monday, Tuesday, ...)")
+                appendLine("# priority: 1 (essential) | 2 (important) | 3 (supplemental)")
+                appendLine("#   also accepted: high | medium | low")
+                appendLine("# active: true/false — defaults to true if omitted")
                 appendLine("name,body_system,instructions,duration,frequency,days,priority,notes,active")
                 appendLine("Diaphragm Breathing,Respiratory,\"Breathe in slowly through your nose for 4 counts, hold for 2, exhale for 6.\",5,Daily,Daily,1,Perform seated or supine,true")
+                appendLine("Hip Flexor Stretch,Lower Extremity,Hold the stretch for 30 seconds each side.,3,3xWeek,\"Mon,Wed,Fri\",2,,true")
+                appendLine("Quad Sets,Lower Extremity,Tighten quad and hold for 10 seconds.,5,2xWeek,Weekdays,high,Only if pain below 5/10,true")
             })
             file
         } catch (_: Exception) { null }
@@ -166,17 +171,19 @@ object CsvImporter {
         val instructions = "instructions".field()
         if (instructions == null) errors.add(RowError(rowNum, "instructions", "Required — cannot be blank"))
 
-        // Duration
+        // Duration — accepts integers or decimals (rounded up to nearest minute)
         val durationStr = "duration".field()
         val duration = if (durationStr == null) {
             errors.add(RowError(rowNum, "duration", "Required — cannot be blank"))
             null
         } else {
-            durationStr.toIntOrNull()?.also { d ->
-                if (d < 1) errors.add(RowError(rowNum, "duration", "Must be at least 1 minute"))
-            } ?: run {
-                errors.add(RowError(rowNum, "duration", "\"$durationStr\" is not a valid integer"))
-                null
+            val asDouble = durationStr.toDoubleOrNull()
+            when {
+                asDouble == null ->
+                    null.also { errors.add(RowError(rowNum, "duration", "\"$durationStr\" is not a valid number")) }
+                asDouble < 1.0 ->
+                    null.also { errors.add(RowError(rowNum, "duration", "Must be at least 1 minute")) }
+                else -> Math.ceil(asDouble).toInt()
             }
         }
 
@@ -207,17 +214,23 @@ object CsvImporter {
             }
         }
 
-        // Priority
+        // Priority — accepts 1/2/3 or text labels
         val priorityStr = "priority".field()
         val priority = if (priorityStr == null) {
             errors.add(RowError(rowNum, "priority", "Required — cannot be blank"))
             null
         } else {
-            priorityStr.toIntOrNull()?.also { p ->
-                if (p !in 1..3) errors.add(RowError(rowNum, "priority", "Must be 1, 2, or 3"))
-            } ?: run {
-                errors.add(RowError(rowNum, "priority", "\"$priorityStr\" is not a valid integer"))
-                null
+            val asInt = priorityStr.toIntOrNull()
+            when {
+                asInt != null && asInt in 1..3 -> asInt
+                asInt != null ->
+                    null.also { errors.add(RowError(rowNum, "priority", "Must be 1, 2, or 3")) }
+                priorityStr.matches(Regex("high|essential|must", RegexOption.IGNORE_CASE)) -> 1
+                priorityStr.matches(Regex("med(ium)?|important|should", RegexOption.IGNORE_CASE)) -> 2
+                priorityStr.matches(Regex("low|supplemental|nice", RegexOption.IGNORE_CASE)) -> 3
+                else ->
+                    null.also { errors.add(RowError(rowNum, "priority",
+                        "\"$priorityStr\" is not valid. Use 1, 2, or 3 (or: high/medium/low)")) }
             }
         }
 
@@ -286,24 +299,56 @@ object CsvImporter {
         return result
     }
 
-    /** Heuristic UTF-8 validation — checks for BOM and invalid byte sequences */
-    private fun isUtf8(bytes: ByteArray): Boolean {
-        // Strip UTF-8 BOM if present
-        var start = 0
-        if (bytes.size >= 3 &&
+    /**
+     * Attempts to decode [bytes] as text, trying encodings in order:
+     *  1. UTF-8 (with optional BOM stripped)
+     *  2. UTF-16 (with BOM)
+     *  3. Windows-1252 / ISO-8859-1 (common Excel export encoding)
+     *
+     * Returns null only if all attempts fail (unlikely for any real text file).
+     */
+    private fun decodeBytes(bytes: ByteArray): String? {
+        // Strip UTF-8 BOM (EF BB BF) if present
+        val (data, startOffset) = if (bytes.size >= 3 &&
             bytes[0] == 0xEF.toByte() &&
             bytes[1] == 0xBB.toByte() &&
             bytes[2] == 0xBF.toByte()
-        ) start = 3
+        ) Pair(bytes, 3) else Pair(bytes, 0)
 
-        return try {
-            String(bytes, start, bytes.size - start, Charsets.UTF_8)
-            // Also verify round-trip
-            val decoded = bytes.toString(Charsets.UTF_8)
-            decoded.toByteArray(Charsets.UTF_8).contentEquals(bytes.copyOfRange(start, bytes.size)).not()
-                .let { _ -> true } // if decode didn't throw, it's valid UTF-8
-        } catch (_: Exception) {
-            false
+        // 1. Try UTF-8
+        if (isValidUtf8(data, startOffset)) {
+            return String(data, startOffset, data.size - startOffset, Charsets.UTF_8)
         }
+
+        // 2. Try UTF-16 (BOM required: FE FF or FF FE)
+        if (bytes.size >= 2 && (
+            (bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) ||
+            (bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte())
+        )) {
+            return try { String(bytes, Charsets.UTF_16) } catch (_: Exception) { null }
+        }
+
+        // 3. Fall back to Windows-1252 (superset of ISO-8859-1; never throws)
+        return String(bytes, Charset.forName("windows-1252"))
+    }
+
+    private fun isValidUtf8(bytes: ByteArray, start: Int): Boolean {
+        var i = start
+        while (i < bytes.size) {
+            val b = bytes[i].toInt() and 0xFF
+            val extraBytes = when {
+                b shr 7 == 0    -> 0  // ASCII
+                b shr 5 == 0b110   -> 1
+                b shr 4 == 0b1110  -> 2
+                b shr 3 == 0b11110 -> 3
+                else -> return false  // invalid lead byte
+            }
+            if (i + extraBytes >= bytes.size) return false
+            repeat(extraBytes) { j ->
+                if ((bytes[i + 1 + j].toInt() and 0xC0) != 0x80) return false
+            }
+            i += 1 + extraBytes
+        }
+        return true
     }
 }

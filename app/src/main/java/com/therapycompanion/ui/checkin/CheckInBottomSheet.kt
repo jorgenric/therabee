@@ -62,7 +62,7 @@ fun CheckInBottomSheet(
 
     var showLayer2 by remember { mutableStateOf(false) }
     var painScore by remember { mutableIntStateOf(0) }
-    var energyScore by remember { mutableIntStateOf(5) }
+    var energyScore by remember { mutableIntStateOf(0) }
     var bpiScore by remember { mutableFloatStateOf(5f) }
     var freeText by remember { mutableStateOf("") }
 
@@ -105,28 +105,13 @@ fun CheckInBottomSheet(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Energy scale
+                // Energy scale — 6-point illustrated, matching FPS-R structure
                 Text(
                     stringResource(R.string.checkin_energy_label),
                     style = MaterialTheme.typography.titleSmall
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "0 = no energy · 10 = full energy",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Slider(
-                    value = energyScore.toFloat(),
-                    onValueChange = { energyScore = it.toInt() },
-                    valueRange = 0f..10f,
-                    steps = 9
-                )
-                Text(
-                    energyScore.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Spacer(Modifier.height(8.dp))
+                EnergyScale(selected = energyScore, onSelect = { energyScore = it })
 
                 Spacer(Modifier.height(24.dp))
 
@@ -216,6 +201,85 @@ fun CheckInBottomSheet(
                     ) { Text(stringResource(R.string.checkin_submit)) }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Energy 6-point scale using a distinct illustration set.
+ *
+ * Drawables required in res/drawable/:
+ *   energy_face_0.png  — no energy (exhausted)
+ *   energy_face_2.png  — very low
+ *   energy_face_4.png  — low
+ *   energy_face_6.png  — moderate
+ *   energy_face_8.png  — good
+ *   energy_face_10.png — full energy
+ *
+ * Scale: 0 = no energy, 10 = full energy (ascending, opposite direction from pain).
+ * Anchor labels shown below first and last faces only.
+ */
+@Composable
+fun EnergyScale(selected: Int, onSelect: (Int) -> Unit) {
+    val faces = listOf(
+        0 to "😴",   // No energy
+        2 to "😪",   // Very low
+        4 to "😑",   // Low
+        6 to "🙂",   // Moderate
+        8 to "😊",   // Good
+        10 to "😄"   // Full energy
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "⚠️ Replace with licensed energy-scale illustrations before release",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            faces.forEach { (score, glyph) ->
+                val isSelected = selected == score
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (isSelected) 2.dp else 0.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                                    else Color.Transparent,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onSelect(score) }
+                        .padding(4.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(glyph, style = MaterialTheme.typography.headlineSmall)
+                }
+            }
+        }
+
+        // Anchor labels below first and last face only (spec §9)
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "No energy",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Full energy",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

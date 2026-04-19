@@ -15,6 +15,9 @@ interface SessionDao {
     @Query("SELECT * FROM sessions ORDER BY started_at DESC")
     fun getAllSessions(): Flow<List<SessionEntity>>
 
+    @Query("SELECT * FROM sessions ORDER BY started_at DESC")
+    suspend fun getAllSessionsOnce(): List<SessionEntity>
+
     @Query("SELECT * FROM sessions WHERE id = :id")
     suspend fun getSessionById(id: String): SessionEntity?
 
@@ -113,4 +116,11 @@ interface SessionDao {
 
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun deleteSessionById(id: String)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSessionIgnore(session: SessionEntity)
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAll()
 }

@@ -9,30 +9,35 @@ import com.therapycompanion.data.model.SessionStatus
 import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
+import com.therapycompanion.data.repository.UserSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 data class ProgressUiState(
     val sessions: List<Session> = emptyList(),
     val checkIns: List<CheckIn> = emptyList(),
-    /** Body systems worked this week (string values matching the exercise library). */
     val coveredBodySystems: Set<String> = emptySet(),
-    /** All body systems present in the active exercise library — for the coverage widget. */
     val allBodySystems: List<String> = emptyList(),
     val isLoading: Boolean = true,
-    val selectedMonth: LocalDate = LocalDate.now().withDayOfMonth(1)
+    val selectedMonth: LocalDate = LocalDate.now().withDayOfMonth(1),
+    /** Consecutive-day streak (with one grace day allowed). 0 = no streak. */
+    val currentStreak: Int = 0,
+    /** Mirrors UserSettings.showStreaks — drives streak widget visibility. */
+    val showStreaks: Boolean = false
 )
 
 class ProgressViewModel(
     private val sessionRepository: SessionRepository,
     private val checkInRepository: CheckInRepository,
-    private val exerciseRepository: ExerciseRepository
+    private val exerciseRepository: ExerciseRepository,
+    private val userSettingsRepository: UserSettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProgressUiState())
@@ -41,10 +46,14 @@ class ProgressViewModel(
     private val zoneId = ZoneId.systemDefault()
 
     init {
-        // Observe body systems live so the coverage widget updates when the library changes.
         viewModelScope.launch {
             exerciseRepository.getAllBodySystems().collect { systems ->
                 _uiState.update { it.copy(allBodySystems = systems) }
+            }
+        }
+        viewModelScope.launch {
+            userSettingsRepository.getUserSettings().collect { settings ->
+                _uiState.update { it.copy(showStreaks = settings.showStreaks) }
             }
         }
         loadData()
@@ -53,18 +62,22 @@ class ProgressViewModel(
     private fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            val thirtyDaysAgo = now - 30L * 24 * 3600 * 1000
-            val sevenDaysAgo = now - 7L * 24 * 3600 * 1000
+            val thirtyDaysAgo  = now - 30L  * 24 * 3600 * 1000
+            val sevenDaysAgo   = now -  7L  * 24 * 3600 * 1000
+            // Load a full year for the calendar and streak — same query, wider window.
+            val oneYearAgo     = now - 365L * 24 * 3600 * 1000
 
-            val sessions = sessionRepository.getSessionsInDateRange(thirtyDaysAgo, now)
-            val checkIns = checkInRepository.getCheckInsInDateRange(thirtyDaysAgo, now)
-            val coveredBodySystems = sessionRepository.getCompletedBodySystemsSince(sevenDaysAgo).toSet()
+            val sessions  = sessionRepository.getSessionsInDateRange(oneYearAgo, now)
+            val checkIns  = checkInRepository.getCheckInsInDateRange(thirtyDaysAgo, now)
+            val covered   = sessionRepository.getCompletedBodySystemsSince(sevenDaysAgo).toSet()
+            val streak    = computeStreak(sessions, LocalDate.now())
 
             _uiState.update {
                 it.copy(
                     sessions = sessions,
                     checkIns = checkIns,
-                    coveredBodySystems = coveredBodySystems,
+                    coveredBodySystems = covered,
+                    currentStreak = streak,
                     isLoading = false
                 )
             }
@@ -75,27 +88,69 @@ class ProgressViewModel(
         _uiState.update { it.copy(selectedMonth = month.withDayOfMonth(1)) }
     }
 
-    /** Returns session dates (epoch ms) for the selected calendar month */
     fun sessionDatesInMonth(): Set<LocalDate> {
         val state = _uiState.value
         val monthStart = state.selectedMonth.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val monthEnd = state.selectedMonth.plusMonths(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val monthEnd   = state.selectedMonth.plusMonths(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
 
         return state.sessions
             .filter { it.status == SessionStatus.Completed && it.startedAt in monthStart until monthEnd }
-            .map {
-                java.time.Instant.ofEpochMilli(it.startedAt).atZone(zoneId).toLocalDate()
-            }
+            .map { Instant.ofEpochMilli(it.startedAt).atZone(zoneId).toLocalDate() }
             .toSet()
+    }
+
+    /**
+     * Counts consecutive days ending today (or yesterday) that have at least one
+     * completed session. One gap of exactly one day is forgiven (grace day).
+     *
+     * Examples:
+     *   Mon✓ Tue✓ Wed– Thu✓ Fri✓ (today) → streak = 4 (Wed is the grace day)
+     *   Mon✓ Tue– Wed– Thu✓ Fri✓ (today) → streak = 2 (two consecutive gaps break it)
+     */
+    private fun computeStreak(sessions: List<Session>, today: LocalDate): Int {
+        val completedDates = sessions
+            .filter { it.status == SessionStatus.Completed }
+            .map { Instant.ofEpochMilli(it.startedAt).atZone(zoneId).toLocalDate() }
+            .toSet()
+
+        if (completedDates.isEmpty()) return 0
+
+        // Streak must be anchored to today or yesterday (one grace day at the tail).
+        val anchor = when {
+            today in completedDates           -> today
+            today.minusDays(1) in completedDates -> today.minusDays(1)
+            else                              -> return 0
+        }
+
+        var streak         = 0
+        var current        = anchor
+        var graceDayUsed   = false
+
+        while (true) {
+            when {
+                current in completedDates -> {
+                    streak++
+                    current = current.minusDays(1)
+                }
+                !graceDayUsed -> {
+                    graceDayUsed = true
+                    current = current.minusDays(1)
+                }
+                else -> break
+            }
+        }
+
+        return streak
     }
 
     class Factory(
         private val sessionRepo: SessionRepository,
         private val checkInRepo: CheckInRepository,
-        private val exerciseRepo: ExerciseRepository
+        private val exerciseRepo: ExerciseRepository,
+        private val userSettingsRepo: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            ProgressViewModel(sessionRepo, checkInRepo, exerciseRepo) as T
+            ProgressViewModel(sessionRepo, checkInRepo, exerciseRepo, userSettingsRepo) as T
     }
 }

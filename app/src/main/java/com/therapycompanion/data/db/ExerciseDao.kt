@@ -16,6 +16,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises ORDER BY priority ASC, name ASC")
     fun getAllExercises(): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercises ORDER BY priority ASC, name ASC")
+    suspend fun getAllExercisesOnce(): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercises WHERE active = 1 ORDER BY priority ASC, name ASC")
     fun getActiveExercises(): Flow<List<ExerciseEntity>>
 
@@ -67,4 +70,11 @@ interface ExerciseDao {
 
     @Query("UPDATE exercises SET active = :active WHERE id = :id")
     suspend fun setExerciseActive(id: String, active: Boolean)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertExerciseIgnore(exercise: ExerciseEntity)
+
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAll()
 }

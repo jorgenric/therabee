@@ -9,6 +9,8 @@ import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
 import com.therapycompanion.data.repository.UserSettingsRepository
+import com.therapycompanion.backup.BackupWorker
+import com.therapycompanion.notification.NotificationScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +31,8 @@ class TherapyCompanionApp : Application() {
         super.onCreate()
         createNotificationChannels()
         initializeDefaultSettings()
+        observeSettingsForNotifications()
+        BackupWorker.schedule(this)
     }
 
     /**
@@ -69,6 +73,19 @@ class TherapyCompanionApp : Application() {
     private fun initializeDefaultSettings() {
         applicationScope.launch {
             userSettingsRepository.initializeDefaults()
+        }
+    }
+
+    /**
+     * Observes the settings Flow and reschedules all notification alarms whenever
+     * settings change — including the first emission on startup, which replaces any
+     * stale alarms from a previous session.
+     */
+    private fun observeSettingsForNotifications() {
+        applicationScope.launch {
+            userSettingsRepository.getUserSettings().collect { settings ->
+                NotificationScheduler.scheduleAll(this@TherapyCompanionApp, settings)
+            }
         }
     }
 

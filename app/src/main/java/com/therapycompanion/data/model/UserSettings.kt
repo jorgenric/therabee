@@ -15,7 +15,8 @@ data class UserSettings(
     val eveningEncouragementTime: String = "20:00",
     val quietHoursStart: String? = null,
     val quietHoursEnd: String? = null,
-    val checkInsEnabled: Boolean = true
+    val checkInsEnabled: Boolean = true,
+    val showStreaks: Boolean = false
 ) {
     companion object {
         val Default = UserSettings()

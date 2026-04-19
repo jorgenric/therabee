@@ -15,6 +15,9 @@ interface CheckInDao {
     @Query("SELECT * FROM check_ins ORDER BY checked_in_at DESC")
     fun getAllCheckIns(): Flow<List<CheckInEntity>>
 
+    @Query("SELECT * FROM check_ins ORDER BY checked_in_at DESC")
+    suspend fun getAllCheckInsOnce(): List<CheckInEntity>
+
     @Query("SELECT * FROM check_ins WHERE id = :id")
     suspend fun getCheckInById(id: String): CheckInEntity?
 
@@ -58,4 +61,11 @@ interface CheckInDao {
 
     @Query("DELETE FROM check_ins WHERE id = :id")
     suspend fun deleteCheckInById(id: String)
+
+    /** Merge-keep-both: skips rows whose id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCheckInIgnore(checkIn: CheckInEntity)
+
+    @Query("DELETE FROM check_ins")
+    suspend fun deleteAll()
 }

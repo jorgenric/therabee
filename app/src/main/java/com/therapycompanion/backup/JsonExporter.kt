@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.OutputStream
 
 /**
  * JSON backup format for the entire app database.
@@ -16,10 +17,14 @@ import java.io.File
  * The export UI displays a clear disclaimer about this limitation (§10).
  *
  * All timestamps stored as UTC epoch milliseconds — never formatted strings.
+ *
+ * `schemaVersion` mirrors the Room database schema version at export time.
+ * Importers MUST refuse files whose schemaVersion exceeds the app's current version (NFR-13).
  */
 @Serializable
 data class BackupData(
     val version: Int = 1,
+    val schemaVersion: Int = JsonExporter.CURRENT_SCHEMA_VERSION,
     val exportedAt: Long = System.currentTimeMillis(),
     val exercises: List<ExerciseBackup>,
     val sessions: List<SessionBackup>,
@@ -80,12 +85,28 @@ data class UserSettingsBackup(
     val eveningEncouragementTime: String,
     val quietHoursStart: String?,
     val quietHoursEnd: String?,
-    val checkInsEnabled: Boolean
+    val checkInsEnabled: Boolean,
+    val showStreaks: Boolean = false   // default preserves backward compat with old backups
 )
 
 object JsonExporter {
 
+    /** Must match AppDatabase.DATABASE_VERSION. Bumped whenever schema changes. */
+    const val CURRENT_SCHEMA_VERSION = 3
+
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+
+    fun buildBackupData(
+        exercises: List<Exercise>,
+        sessions: List<Session>,
+        checkIns: List<CheckIn>,
+        settings: UserSettings?
+    ) = BackupData(
+        exercises = exercises.map { it.toBackup() },
+        sessions = sessions.map { it.toBackup() },
+        checkIns = checkIns.map { it.toBackup() },
+        userSettings = settings?.toBackup()
+    )
 
     fun export(
         exercises: List<Exercise>,
@@ -94,13 +115,21 @@ object JsonExporter {
         settings: UserSettings?,
         outputFile: File
     ) {
-        val backup = BackupData(
-            exercises = exercises.map { it.toBackup() },
-            sessions = sessions.map { it.toBackup() },
-            checkIns = checkIns.map { it.toBackup() },
-            userSettings = settings?.toBackup()
-        )
-        outputFile.writeText(json.encodeToString(backup))
+        outputFile.writeText(json.encodeToString(buildBackupData(exercises, sessions, checkIns, settings)))
+    }
+
+    fun export(
+        exercises: List<Exercise>,
+        sessions: List<Session>,
+        checkIns: List<CheckIn>,
+        settings: UserSettings?,
+        outputStream: OutputStream
+    ) {
+        // Do NOT close the stream — the caller owns it and closes it via its own use{} block.
+        outputStream.writer().apply {
+            write(json.encodeToString(buildBackupData(exercises, sessions, checkIns, settings)))
+            flush()
+        }
     }
 
     fun parse(file: File): BackupData? =
@@ -128,6 +157,6 @@ object JsonExporter {
     private fun UserSettings.toBackup() = UserSettingsBackup(
         dailyLoad, easierDayEnabled, morningReminderEnabled, morningReminderTime,
         afternoonCheckInEnabled, afternoonCheckInTime, eveningEncouragementEnabled,
-        eveningEncouragementTime, quietHoursStart, quietHoursEnd, checkInsEnabled
+        eveningEncouragementTime, quietHoursStart, quietHoursEnd, checkInsEnabled, showStreaks
     )
 }

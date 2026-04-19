@@ -12,6 +12,9 @@ class SessionRepository(private val dao: SessionDao) {
     fun getAllSessions(): Flow<List<Session>> =
         dao.getAllSessions().map { list -> list.map { it.toDomain() } }
 
+    suspend fun getAllSessionsOnce(): List<Session> =
+        dao.getAllSessionsOnce().map { it.toDomain() }
+
     suspend fun getSessionById(id: String): Session? =
         dao.getSessionById(id)?.toDomain()
 
@@ -49,4 +52,9 @@ class SessionRepository(private val dao: SessionDao) {
 
     suspend fun deleteSessionById(id: String) =
         dao.deleteSessionById(id)
+
+    suspend fun insertSessionIgnore(session: Session) =
+        dao.insertSessionIgnore(session.toEntity())
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

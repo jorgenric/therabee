@@ -12,6 +12,9 @@ class CheckInRepository(private val dao: CheckInDao) {
     fun getAllCheckIns(): Flow<List<CheckIn>> =
         dao.getAllCheckIns().map { list -> list.map { it.toDomain() } }
 
+    suspend fun getAllCheckInsOnce(): List<CheckIn> =
+        dao.getAllCheckInsOnce().map { it.toDomain() }
+
     suspend fun getCheckInById(id: String): CheckIn? =
         dao.getCheckInById(id)?.toDomain()
 
@@ -35,4 +38,9 @@ class CheckInRepository(private val dao: CheckInDao) {
 
     suspend fun deleteCheckInById(id: String) =
         dao.deleteCheckInById(id)
+
+    suspend fun insertCheckInIgnore(checkIn: CheckIn) =
+        dao.insertCheckInIgnore(checkIn.toEntity())
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

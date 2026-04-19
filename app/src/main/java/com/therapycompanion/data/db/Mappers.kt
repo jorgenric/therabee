@@ -102,7 +102,8 @@ fun UserSettingsEntity.toDomain(): UserSettings = UserSettings(
     eveningEncouragementTime = eveningEncouragementTime,
     quietHoursStart = quietHoursStart,
     quietHoursEnd = quietHoursEnd,
-    checkInsEnabled = checkInsEnabled
+    checkInsEnabled = checkInsEnabled,
+    showStreaks = showStreaks
 )
 
 fun UserSettings.toEntity(): UserSettingsEntity = UserSettingsEntity(
@@ -117,5 +118,6 @@ fun UserSettings.toEntity(): UserSettingsEntity = UserSettingsEntity(
     eveningEncouragementTime = eveningEncouragementTime,
     quietHoursStart = quietHoursStart,
     quietHoursEnd = quietHoursEnd,
-    checkInsEnabled = checkInsEnabled
+    checkInsEnabled = checkInsEnabled,
+    showStreaks = showStreaks
 )
