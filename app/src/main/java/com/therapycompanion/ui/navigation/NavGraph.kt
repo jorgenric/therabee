@@ -137,11 +137,20 @@ fun TherapyCompanionNavGraph(startDestination: String? = null) {
                 val exerciseId = backStackEntry.arguments?.getString("exerciseId") ?: return@composable
                 SessionScreen(
                     exerciseId = exerciseId,
+                    onCancel = {
+                        navController.popBackStack(Screen.Today.route, inclusive = false)
+                    },
                     onDone = {
                         navController.popBackStack(Screen.Today.route, inclusive = false)
                     },
                     onSkip = {
                         navController.popBackStack(Screen.Today.route, inclusive = false)
+                    },
+                    onStartNext = { nextExerciseId ->
+                        navController.navigate(Screen.Session.route(nextExerciseId)) {
+                            // Replace the current session on the back stack so Back goes to Today
+                            popUpTo(Screen.Today.route) { inclusive = false }
+                        }
                     }
                 )
             }

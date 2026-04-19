@@ -28,22 +28,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -63,14 +58,12 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TherapyCompanionApp
-    val acknowledgmentMessages = stringArrayResource(R.array.acknowledgment_messages).toList()
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.Factory(
             app.exerciseRepository,
             app.sessionRepository,
             app.userSettingsRepository,
-            app.checkInRepository,
-            acknowledgmentMessages
+            app.checkInRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()
@@ -85,17 +78,8 @@ fun HomeScreen(
         )
     }
 
-    // Show acknowledgment message as a Snackbar after a session is completed.
-    val snackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(uiState.acknowledgmentMessage) {
-        val message = uiState.acknowledgmentMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
-        viewModel.dismissAcknowledgment()
-    }
-
     Scaffold(
         modifier = Modifier.padding(contentPadding),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {

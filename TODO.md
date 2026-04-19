@@ -14,9 +14,9 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 
 ## §5.3 Session Screen
 
-- [ ] **Fix X / Close button** — currently calls `markSkipped()`, which is wrong. Closing mid-session should act as "Pause — I need a break": return to Home without recording any session record.
-- [ ] **Full-screen acknowledgment after Done** — spec calls for a dedicated screen showing the exercise name and an encouragement message. Currently implemented as a snackbar on Home.
-- [ ] **"Next up: [exercise]" prompt** — after the acknowledgment, offer to launch the next pending exercise immediately.
+- [x] **Fix X / Close button** — calls `cancelSession()` which deletes the InProgress record; returns Home with no session written.
+- [x] **Full-screen acknowledgment after Done** — `AcknowledgmentScreen` composable shown in-place when `showAcknowledgment = true`; shows exercise name + encouragement message.
+- [x] **"Next up: [exercise]" prompt** — `findNextExercise()` in SessionViewModel queries highest-priority incomplete exercise for today; "Start now" button navigates directly into next session.
 
 ---
 

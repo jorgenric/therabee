@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,13 +28,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,24 +48,23 @@ import java.io.File
 @Composable
 fun SessionScreen(
     exerciseId: String,
+    onCancel: () -> Unit,
     onDone: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onStartNext: (exerciseId: String) -> Unit
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as TherapyCompanionApp
+    val acknowledgmentMessages = stringArrayResource(R.array.acknowledgment_messages).toList()
     val viewModel: SessionViewModel = viewModel(
         factory = SessionViewModel.Factory(
             exerciseId,
             app.exerciseRepository,
-            app.sessionRepository
+            app.sessionRepository,
+            acknowledgmentMessages
         )
     )
     val uiState by viewModel.uiState.collectAsState()
-
-    // Navigate away after completion
-    LaunchedEffect(uiState.isComplete) {
-        if (uiState.isComplete) onDone()
-    }
 
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -74,14 +75,26 @@ fun SessionScreen(
 
     val exercise = uiState.exercise ?: return
 
+    if (uiState.showAcknowledgment) {
+        AcknowledgmentScreen(
+            exerciseName = exercise.name,
+            message = uiState.acknowledgmentMessage,
+            nextExerciseName = uiState.nextExerciseName,
+            onStartNext = { uiState.nextExerciseId?.let(onStartNext) },
+            onDone = onDone
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(exercise.bodySystem) },
                 navigationIcon = {
+                    // X = Pause/cancel — returns Home with no session record written
                     IconButton(onClick = {
-                        viewModel.markSkipped()
-                        onSkip()
+                        viewModel.cancelSession()
+                        onCancel()
                     }) {
                         Icon(
                             Icons.Filled.Close,
@@ -102,7 +115,6 @@ fun SessionScreen(
         ) {
             Spacer(Modifier.height(16.dp))
 
-            // Exercise name
             Text(
                 text = exercise.name,
                 style = MaterialTheme.typography.headlineMedium,
@@ -142,7 +154,6 @@ fun SessionScreen(
                 Spacer(Modifier.height(24.dp))
             }
 
-            // Instructions
             Text(
                 text = stringResource(R.string.session_instructions_label),
                 style = MaterialTheme.typography.titleSmall,
@@ -173,7 +184,6 @@ fun SessionScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -200,6 +210,79 @@ fun SessionScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun AcknowledgmentScreen(
+    exerciseName: String,
+    message: String,
+    nextExerciseName: String?,
+    onStartNext: () -> Unit,
+    onDone: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Check,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(64.dp)
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = exerciseName,
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (nextExerciseName != null) {
+            Spacer(Modifier.height(40.dp))
+
+            Text(
+                text = "Next up",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = nextExerciseName,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(16.dp))
+            FilledTonalButton(
+                onClick = onStartNext,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Start now")
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = onDone,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to today")
         }
     }
 }
