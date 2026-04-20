@@ -14,6 +14,7 @@ import com.therapycompanion.backup.JsonExporter
 import com.therapycompanion.backup.JsonImporter
 import com.therapycompanion.backup.MergeStrategy
 import com.therapycompanion.backup.RestoreResult
+import com.therapycompanion.data.model.CustomReminder
 import com.therapycompanion.data.model.UserSettings
 import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
@@ -98,6 +99,30 @@ class SettingsViewModel(
     fun updateShowStreaks(enabled: Boolean) = save(_uiState.value.settings.copy(showStreaks = enabled))
     fun updateDisplayName(name: String) = save(_uiState.value.settings.copy(displayName = name))
     fun updateThemeMode(mode: String) = save(_uiState.value.settings.copy(themeMode = mode))
+
+    fun addCustomReminder() {
+        val current = _uiState.value.settings.customReminders
+        if (current.size >= 3) return
+        save(_uiState.value.settings.copy(
+            customReminders = current + CustomReminder(time = "09:00", message = "Time for your exercises.")
+        ))
+    }
+
+    fun updateCustomReminder(index: Int, time: String, message: String) {
+        val updated = _uiState.value.settings.customReminders.toMutableList()
+        if (index in updated.indices) {
+            updated[index] = CustomReminder(time = time, message = message)
+            save(_uiState.value.settings.copy(customReminders = updated))
+        }
+    }
+
+    fun removeCustomReminder(index: Int) {
+        val updated = _uiState.value.settings.customReminders.toMutableList()
+        if (index in updated.indices) {
+            updated.removeAt(index)
+            save(_uiState.value.settings.copy(customReminders = updated))
+        }
+    }
 
     // ── Export (file picker destination) ──────────────────────────────────────
 

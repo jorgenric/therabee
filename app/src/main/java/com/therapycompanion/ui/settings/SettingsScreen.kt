@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Share
@@ -27,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -355,6 +358,35 @@ fun SettingsScreen(
                 Divider()
             }
 
+            // ── Custom reminders ───────────────────────────────────────────
+            item { SectionHeader("Custom Reminders") }
+            item {
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Text(
+                        "Add up to 3 additional reminders with custom messages.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    settings.customReminders.forEachIndexed { index, reminder ->
+                        CustomReminderRow(
+                            reminder = reminder,
+                            onTimeChange = { viewModel.updateCustomReminder(index, it, reminder.message) },
+                            onMessageChange = { viewModel.updateCustomReminder(index, reminder.time, it) },
+                            onRemove = { viewModel.removeCustomReminder(index) }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (settings.customReminders.size < 3) {
+                        TextButton(onClick = { viewModel.addCustomReminder() }) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Text("  Add reminder")
+                        }
+                    }
+                }
+                Divider()
+            }
+
             // ── Quiet hours ────────────────────────────────────────────────
             item { SectionHeader("Quiet Hours") }
             item {
@@ -585,6 +617,44 @@ private fun SectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
     )
+}
+
+@Composable
+private fun CustomReminderRow(
+    reminder: com.therapycompanion.data.model.CustomReminder,
+    onTimeChange: (String) -> Unit,
+    onMessageChange: (String) -> Unit,
+    onRemove: () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = reminder.time,
+                onValueChange = onTimeChange,
+                label = { Text("Time (HH:mm)") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onRemove) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Remove reminder",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        OutlinedTextField(
+            value = reminder.message,
+            onValueChange = onMessageChange,
+            label = { Text("Message") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

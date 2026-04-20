@@ -29,9 +29,18 @@ object NotificationScheduler {
 
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-    private const val REQUEST_MORNING = 1001
-    private const val REQUEST_CHECKIN = 1002
-    private const val REQUEST_EVENING = 1003
+    private const val REQUEST_MORNING  = 1001
+    private const val REQUEST_CHECKIN  = 1002
+    private const val REQUEST_EVENING  = 1003
+    private const val REQUEST_CUSTOM_1 = 1004
+    private const val REQUEST_CUSTOM_2 = 1005
+    private const val REQUEST_CUSTOM_3 = 1006
+
+    // Notification type tags — read by NotificationReceiver at fire time.
+    const val TYPE_MORNING  = "morning"
+    const val TYPE_AFTERNOON = "afternoon"
+    const val TYPE_EVENING  = "evening"
+    const val TYPE_CUSTOM   = "custom"
 
     suspend fun rescheduleAll(context: Context) = withContext(Dispatchers.IO) {
         val app = context.applicationContext as TherapyCompanionApp
@@ -46,6 +55,7 @@ object NotificationScheduler {
             schedule(
                 context = context,
                 requestCode = REQUEST_MORNING,
+                type = TYPE_MORNING,
                 timeStr = settings.morningReminderTime,
                 channelId = TherapyCompanionApp.CHANNEL_MORNING,
                 title = "Time for your exercises",
@@ -56,26 +66,46 @@ object NotificationScheduler {
         }
 
         if (settings.afternoonCheckInEnabled) {
+            // Body is a fallback — receiver suppresses this notification if exercises were done.
             schedule(
                 context = context,
                 requestCode = REQUEST_CHECKIN,
+                type = TYPE_AFTERNOON,
                 timeStr = settings.afternoonCheckInTime,
                 channelId = TherapyCompanionApp.CHANNEL_CHECKIN,
-                title = "How are you feeling?",
-                body = "Take a moment to log your pain and energy levels.",
+                title = "No pressure — just checking in",
+                body = "Your exercises are waiting whenever you're ready.",
                 quietStart = settings.quietHoursStart,
                 quietEnd = settings.quietHoursEnd
             )
         }
 
         if (settings.eveningEncouragementEnabled) {
+            // Body is a placeholder — receiver picks the correct message at fire time.
             schedule(
                 context = context,
                 requestCode = REQUEST_EVENING,
+                type = TYPE_EVENING,
                 timeStr = settings.eveningEncouragementTime,
                 channelId = TherapyCompanionApp.CHANNEL_EVENING,
-                title = "You showed up today.",
-                body = "Every session matters. Rest well.",
+                title = "End of day",
+                body = "",
+                quietStart = settings.quietHoursStart,
+                quietEnd = settings.quietHoursEnd
+            )
+        }
+
+        // Custom reminders (up to 3)
+        val customRequestCodes = listOf(REQUEST_CUSTOM_1, REQUEST_CUSTOM_2, REQUEST_CUSTOM_3)
+        settings.customReminders.forEachIndexed { index, reminder ->
+            schedule(
+                context = context,
+                requestCode = customRequestCodes[index],
+                type = TYPE_CUSTOM,
+                timeStr = reminder.time,
+                channelId = TherapyCompanionApp.CHANNEL_CUSTOM,
+                title = "Therapy reminder",
+                body = reminder.message,
                 quietStart = settings.quietHoursStart,
                 quietEnd = settings.quietHoursEnd
             )
@@ -85,6 +115,7 @@ object NotificationScheduler {
     private fun schedule(
         context: Context,
         requestCode: Int,
+        type: String,
         timeStr: String,
         channelId: String,
         title: String,
@@ -112,6 +143,7 @@ object NotificationScheduler {
             putExtra(NotificationReceiver.EXTRA_TITLE, title)
             putExtra(NotificationReceiver.EXTRA_BODY, body)
             putExtra(NotificationReceiver.EXTRA_REQUEST_CODE, requestCode)
+            putExtra(NotificationReceiver.EXTRA_TYPE, type)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -130,7 +162,10 @@ object NotificationScheduler {
 
     fun cancelAll(context: Context) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
-        listOf(REQUEST_MORNING, REQUEST_CHECKIN, REQUEST_EVENING).forEach { requestCode ->
+        listOf(
+            REQUEST_MORNING, REQUEST_CHECKIN, REQUEST_EVENING,
+            REQUEST_CUSTOM_1, REQUEST_CUSTOM_2, REQUEST_CUSTOM_3
+        ).forEach { requestCode ->
             val intent = Intent(context, NotificationReceiver::class.java)
             val pendingIntent = PendingIntent.getBroadcast(
                 context,

@@ -1,5 +1,11 @@
 package com.therapycompanion.data.model
 
+/** A single user-defined reminder: time of day and a short custom message. */
+data class CustomReminder(
+    val time: String,    // "HH:mm"
+    val message: String
+)
+
 /**
  * Domain model for user settings/preferences.
  * Times represented as "HH:mm" strings matching storage format.
@@ -20,7 +26,9 @@ data class UserSettings(
     /** Name shown in the Home screen greeting. Blank = no name shown. */
     val displayName: String = "",
     /** "System" | "Light" | "Dark" */
-    val themeMode: String = "System"
+    val themeMode: String = "System",
+    /** Up to 3 user-defined reminder times with custom messages. */
+    val customReminders: List<CustomReminder> = emptyList()
 ) {
     companion object {
         val Default = UserSettings()

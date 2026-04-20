@@ -64,6 +64,13 @@ class TherapyCompanionApp : Application() {
                 NotificationManager.IMPORTANCE_MIN
             ).apply {
                 description = "A quiet end-of-day acknowledgment"
+            },
+            NotificationChannel(
+                CHANNEL_CUSTOM,
+                "Custom reminders",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "User-defined reminder times"
             }
         )
 
@@ -93,5 +100,6 @@ class TherapyCompanionApp : Application() {
         const val CHANNEL_MORNING = "channel_morning"
         const val CHANNEL_CHECKIN = "channel_checkin"
         const val CHANNEL_EVENING = "channel_evening"
+        const val CHANNEL_CUSTOM  = "channel_custom"
     }
 }
