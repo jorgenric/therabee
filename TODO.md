@@ -7,19 +7,8 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 ## Open
 
 
-
-
-
 ### §9 FPS-R Illustrations
 - [ ] Replace emoji placeholders with actual drawable assets: `pain_face_0`, `pain_face_2`, `pain_face_4`, `pain_face_6`, `pain_face_8`, `pain_face_10` (dog-face adaptation). Also a distinct 6-illustration set for the energy scale.
-
-### §9.4 Humble Brag
-- [ ] **Progress screen button** — persistent "Humble Brag" button (trophy/star icon) accessible from the Progress screen at any time; no milestone required.
-- [ ] **Streak prompt** — secondary call-to-action alongside the streak badge when a streak milestone is reached; not a blocking interruption.
-- [ ] **Content generation** — call Anthropic API with user stats: current streak, sessions last 7 days, lifetime session count, body systems worked last 7 days, display name. Produce 3–5 warm second-person sentences referencing at least one concrete detail.
-- [ ] **Fallback templates** — pre-written template strings filled with live data, used when the API call fails (offline or error). Must feel as warm as generated output.
-- [ ] **Preview + share UI** — generated text shown in a full-screen preview card; primary action is "Copy to clipboard" (brief toast confirmation); secondary action is "Regenerate" for a new variation.
-- [ ] **No new DB tables** — reads from existing `Session`, `Exercise`, and `UserSettings` only; generated text is not stored.
 
 ### §10.4 Update-Safety Workflow
 - [ ] "Before you update" one-time tooltip on first Settings visit.
@@ -40,3 +29,4 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 - [x] §6 Exercise CSV import — parsing, validation, comment stripping, frequency/days/priority aliases, encoding auto-detection, template export
 - [x] §6 Easier Day Mode — priority filter (P1 only → fall back P2 → fall back all eligible); duration preference (shorter first within priority); body-system diversity pool scoped to priority-filtered candidates
 - [x] §10 Backup, restore & update safety — JSON export (share-sheet + file picker), three-strategy restore, weekly auto-backup with 4-file rolling retention, 14-day reminder banner, reset progress, session + check-in CSV export
+- [x] §9.4 Humble Brag — trophy button in Progress TopAppBar; stats overlay card (sessions this week, lifetime, streak, body systems); 20-phrase encouragement library (offline, no API); "New quote" cycles phrases; Copy formats stats + phrase to clipboard; streak milestone banner (at 3/7/14/21/30/60/90… days) with inline "Brag a little" CTA; spec updated to v1.3 to reflect offline-only approach

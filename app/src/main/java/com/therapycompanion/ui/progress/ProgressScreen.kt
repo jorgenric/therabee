@@ -20,13 +20,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Mood
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -39,11 +48,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.widget.Toast
 import com.therapycompanion.R
 import com.therapycompanion.TherapyCompanionApp
 import com.therapycompanion.data.model.CheckIn
@@ -81,6 +95,19 @@ fun ProgressScreen(contentPadding: PaddingValues) {
         )
     }
 
+    // Humble Brag overlay — progress summary card.
+    HumbleBragOverlay(
+        state = uiState.humbleBragState,
+        displayName = uiState.displayName,
+        currentStreak = uiState.currentStreak,
+        showStreaks = uiState.showStreaks,
+        exercisesThisWeek = uiState.exercisesThisWeek,
+        lifetimeCompletedCount = uiState.lifetimeCompletedCount,
+        bodySystemsLast7Days = uiState.bodySystemsLast7Days,
+        onDismiss = { viewModel.dismissHumbleBrag() },
+        onRegenerate = { viewModel.generateHumbleBrag() }
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -89,6 +116,12 @@ fun ProgressScreen(contentPadding: PaddingValues) {
         TopAppBar(
             title = { Text(stringResource(R.string.progress_title)) },
             actions = {
+                IconButton(onClick = { viewModel.generateHumbleBrag() }) {
+                    Icon(
+                        Icons.Filled.EmojiEvents,
+                        contentDescription = "Humble Brag"
+                    )
+                }
                 IconButton(onClick = { viewModel.openManualCheckIn() }) {
                     Icon(
                         Icons.Filled.Mood,
@@ -130,6 +163,14 @@ fun ProgressScreen(contentPadding: PaddingValues) {
                     item {
                         StreakBadge(streak = uiState.currentStreak)
                     }
+                    if (isStreakMilestone(uiState.currentStreak)) {
+                        item {
+                            StreakMilestoneBrag(
+                                streak = uiState.currentStreak,
+                                onHumbleBrag = { viewModel.generateHumbleBrag() }
+                            )
+                        }
+                    }
                 }
 
                 // ── Body system coverage ──────────────────────────────────
@@ -167,6 +208,201 @@ fun ProgressScreen(contentPadding: PaddingValues) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+// ── Humble Brag overlay ───────────────────────────────────────────────────────
+
+@Composable
+private fun HumbleBragOverlay(
+    state: HumbleBragState,
+    displayName: String,
+    currentStreak: Int,
+    showStreaks: Boolean,
+    exercisesThisWeek: Int,
+    lifetimeCompletedCount: Int,
+    bodySystemsLast7Days: List<String>,
+    onDismiss: () -> Unit,
+    onRegenerate: () -> Unit
+) {
+    if (state !is HumbleBragState.Ready) return
+
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.EmojiEvents,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Text(
+                        text = if (displayName.isNotBlank()) "$displayName's Progress" else "Your Progress",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+
+                // Stats block
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatRow(label = "Sessions this week", value = exercisesThisWeek.toString())
+                    StatRow(label = "Lifetime sessions", value = lifetimeCompletedCount.toString())
+                    if (showStreaks && currentStreak > 0) {
+                        val days = if (currentStreak == 1) "day" else "days"
+                        StatRow(label = "Current streak", value = "$currentStreak $days")
+                    }
+                    if (bodySystemsLast7Days.isNotEmpty()) {
+                        StatRow(
+                            label = "Body systems this week",
+                            value = bodySystemsLast7Days.joinToString(", ")
+                        )
+                    }
+                }
+
+                // Divider
+                androidx.compose.material3.HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Encouraging phrase
+                Text(
+                    text = state.phrase,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val copyText = buildString {
+                                if (displayName.isNotBlank()) appendLine("$displayName's Progress")
+                                else appendLine("My Progress")
+                                appendLine("• Sessions this week: $exercisesThisWeek")
+                                appendLine("• Lifetime sessions: $lifetimeCompletedCount")
+                                if (showStreaks && currentStreak > 0) {
+                                    val days = if (currentStreak == 1) "day" else "days"
+                                    appendLine("• Streak: $currentStreak $days")
+                                }
+                                if (bodySystemsLast7Days.isNotEmpty()) {
+                                    appendLine("• Body systems: ${bodySystemsLast7Days.joinToString(", ")}")
+                                }
+                                appendLine()
+                                append(state.phrase)
+                            }
+                            clipboardManager.setText(AnnotatedString(copyText))
+                            Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.ContentCopy, contentDescription = null)
+                        Spacer(Modifier.size(6.dp))
+                        Text("Copy")
+                    }
+                    OutlinedButton(
+                        onClick = onRegenerate,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                        Spacer(Modifier.size(6.dp))
+                        Text("New quote")
+                    }
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Dismiss")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+// ── Streak milestone prompt ───────────────────────────────────────────────────
+
+private fun isStreakMilestone(streak: Int): Boolean =
+    streak in setOf(3, 7, 14, 21, 30) || (streak > 30 && streak % 30 == 0)
+
+@Composable
+private fun StreakMilestoneBrag(streak: Int, onHumbleBrag: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Filled.EmojiEvents,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "$streak days — that's worth sharing.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            TextButton(onClick = onHumbleBrag) {
+                Text("Brag a little")
             }
         }
     }
