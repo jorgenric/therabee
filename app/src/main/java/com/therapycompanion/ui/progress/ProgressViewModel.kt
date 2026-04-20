@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.therapycompanion.data.model.CheckIn
 import com.therapycompanion.data.model.Session
 import com.therapycompanion.data.model.SessionStatus
+import java.util.UUID
 import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
@@ -35,7 +36,9 @@ data class ProgressUiState(
     /** Count of completed sessions in the current Mon–Sun week. */
     val exercisesThisWeek: Int = 0,
     /** exerciseId → name lookup for the session history log. */
-    val exerciseNamesById: Map<String, String> = emptyMap()
+    val exerciseNamesById: Map<String, String> = emptyMap(),
+    /** True while the manual check-in bottom sheet is visible. */
+    val showManualCheckIn: Boolean = false
 )
 
 class ProgressViewModel(
@@ -103,6 +106,40 @@ class ProgressViewModel(
 
     fun selectMonth(month: LocalDate) {
         _uiState.update { it.copy(selectedMonth = month.withDayOfMonth(1)) }
+    }
+
+    fun openManualCheckIn() {
+        _uiState.update { it.copy(showManualCheckIn = true) }
+    }
+
+    fun dismissManualCheckIn() {
+        _uiState.update { it.copy(showManualCheckIn = false) }
+    }
+
+    fun submitManualCheckIn(
+        painScore: Int,
+        energyScore: Int,
+        bpiDomain: String?,
+        bpiScore: Int?,
+        freeText: String?
+    ) {
+        _uiState.update { it.copy(showManualCheckIn = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            checkInRepository.insertCheckIn(
+                CheckIn(
+                    id = UUID.randomUUID().toString(),
+                    checkedInAt = System.currentTimeMillis(),
+                    painScore = painScore,
+                    energyScore = energyScore,
+                    bpiDomain = bpiDomain,
+                    bpiScore = bpiScore,
+                    freeText = freeText,
+                    dismissed = false
+                )
+            )
+            // Reload so the trend chart reflects the new entry.
+            loadData()
+        }
     }
 
     fun sessionDatesInMonth(): Set<LocalDate> {

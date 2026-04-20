@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.therapycompanion.R
 import com.therapycompanion.TherapyCompanionApp
 import com.therapycompanion.data.model.CheckIn
+import com.therapycompanion.ui.checkin.CheckInBottomSheet
 import com.therapycompanion.data.model.Session
 import com.therapycompanion.data.model.SessionStatus
 import java.time.Instant
@@ -69,6 +71,16 @@ fun ProgressScreen(contentPadding: PaddingValues) {
     )
     val uiState by viewModel.uiState.collectAsState()
 
+    // Manual check-in sheet — user can open at any time from this screen.
+    if (uiState.showManualCheckIn) {
+        CheckInBottomSheet(
+            onDismiss = { viewModel.dismissManualCheckIn() },
+            onSubmit = { painScore, energyScore, bpiDomain, bpiScore, freeText ->
+                viewModel.submitManualCheckIn(painScore, energyScore, bpiDomain, bpiScore, freeText)
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -76,6 +88,14 @@ fun ProgressScreen(contentPadding: PaddingValues) {
     ) {
         TopAppBar(
             title = { Text(stringResource(R.string.progress_title)) },
+            actions = {
+                IconButton(onClick = { viewModel.openManualCheckIn() }) {
+                    Icon(
+                        Icons.Filled.Mood,
+                        contentDescription = "Check in"
+                    )
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.background
             )

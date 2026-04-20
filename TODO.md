@@ -9,10 +9,6 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 ### §5.1 Home Screen
 - [ ] Summary line phrasing: change `"N of M done today"` → `"You've done N today — that's great."` No total count (spec is explicit: *"Not '3 of 9 remaining.'"*)
 
-### §5.4 Progress Screen
-- [ ] Body system coverage: simple visual showing which systems have been worked in the last 7 days (derived from live library values, not a fixed enum).
-- [ ] Streak display: show only if `show_streaks` setting is true and streak is active; 1-day grace period. Add `show_streaks: Boolean` to `UserSettings`.
-- [ ] Manual check-in: user can invoke the check-in from the Progress screen at any time, independent of the automatic daily prompt.
 
 ### §6 Easier Day Mode
 - [ ] Priority filter: when Easier Day is on, select Priority 1 exercises only; if none qualify, fall back to Priority 2. Currently only halves load cap.
@@ -40,5 +36,6 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 - [x] §5.3 Session screen — close/X acts as pause (deletes InProgress record, no skip written), full-screen acknowledgment after Done, "Next up" prompt with Start now button
 - [x] §5.3 Session screen — optional user-activated countdown timer (Start/Pause/Resume); counts down from `durationMinutes × 60`; hidden until first tap; elapsed computed from countdown for session record
 - [x] §5.4 Progress screen — "Exercises this week" count with positive framing above the calendar; session history log (date, name, duration, Done/Skipped) below the trend chart
+- [x] §5.4 Progress screen — body system coverage (last 7 days, live library values); streak badge with 1-day grace period (gated by `show_streaks` setting); manual check-in button in TopAppBar opens `CheckInBottomSheet` at any time
 - [x] §6 Exercise CSV import — parsing, validation, comment stripping, frequency/days/priority aliases, encoding auto-detection, template export
 - [x] §10 Backup, restore & update safety — JSON export (share-sheet + file picker), three-strategy restore, weekly auto-backup with 4-file rolling retention, 14-day reminder banner, reset progress, session + check-in CSV export
