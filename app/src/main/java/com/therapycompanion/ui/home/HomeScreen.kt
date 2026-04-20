@@ -306,9 +306,9 @@ private fun ExerciseCard(
 @Composable
 private fun DailySummary(completed: Int, total: Int) {
     val message = when {
-        completed == 0 -> "You have $total exercise${if (total == 1) "" else "s"} today."
         completed == total -> "All done for today — great work!"
-        else -> "$completed of $total done today — keep it going!"
+        completed == 0 -> "You've done 0 today — every day is a fresh start."
+        else -> "You've done $completed today — keep it going!"
     }
     Text(
         text = message,
