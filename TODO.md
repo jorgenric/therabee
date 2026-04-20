@@ -10,9 +10,6 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 - [ ] Summary line phrasing: change `"N of M done today"` → `"You've done N today — that's great."` No total count (spec is explicit: *"Not '3 of 9 remaining.'"*)
 
 
-### §6 Easier Day Mode
-- [ ] Priority filter: when Easier Day is on, select Priority 1 exercises only; if none qualify, fall back to Priority 2. Currently only halves load cap.
-- [ ] Duration preference: when Easier Day is on, prefer shortest-duration exercises among those that qualify.
 
 ### §7 Notifications
 - [ ] Afternoon notification: only fire if zero exercises completed that day. Currently always fires if the setting is on.
@@ -38,4 +35,5 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 - [x] §5.4 Progress screen — "Exercises this week" count with positive framing above the calendar; session history log (date, name, duration, Done/Skipped) below the trend chart
 - [x] §5.4 Progress screen — body system coverage (last 7 days, live library values); streak badge with 1-day grace period (gated by `show_streaks` setting); manual check-in button in TopAppBar opens `CheckInBottomSheet` at any time
 - [x] §6 Exercise CSV import — parsing, validation, comment stripping, frequency/days/priority aliases, encoding auto-detection, template export
+- [x] §6 Easier Day Mode — priority filter (P1 only → fall back P2 → fall back all eligible); duration preference (shorter first within priority); body-system diversity pool scoped to priority-filtered candidates
 - [x] §10 Backup, restore & update safety — JSON export (share-sheet + file picker), three-strategy restore, weekly auto-backup with 4-file rolling retention, 14-day reminder banner, reset progress, session + check-in CSV export
