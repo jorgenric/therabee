@@ -16,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -129,14 +131,33 @@ fun SessionScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Timer
-            val minutes = uiState.elapsedSeconds / 60
-            val seconds = uiState.elapsedSeconds % 60
-            Text(
-                text = String.format("%02d:%02d", minutes, seconds),
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
+            // Optional user-activated countdown timer
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (uiState.timerStarted) {
+                    val minutes = uiState.remainingSeconds / 60
+                    val seconds = uiState.remainingSeconds % 60
+                    Text(
+                        text = String.format("%02d:%02d", minutes, seconds),
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                OutlinedButton(onClick = { viewModel.toggleTimer() }) {
+                    Icon(
+                        imageVector = if (uiState.timerActive) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        text = when {
+                            !uiState.timerStarted -> "Start timer"
+                            uiState.timerActive -> "Pause"
+                            else -> "Resume"
+                        }
+                    )
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
 

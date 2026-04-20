@@ -25,7 +25,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CheckInEntity::class,
         UserSettingsEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -84,13 +84,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Version 4 → 5: adds six nullable columns for up to 3 custom reminders.
+         * NULL default means no reminders are configured on existing installs.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_1_time TEXT")
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_1_msg TEXT")
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_2_time TEXT")
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_2_msg TEXT")
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_3_time TEXT")
+                database.execSQL("ALTER TABLE user_settings ADD COLUMN custom_reminder_3_msg TEXT")
+            }
+        }
+
         private fun buildDatabase(context: Context): AppDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 DATABASE_NAME
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
     }
 }

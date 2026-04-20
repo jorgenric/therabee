@@ -73,5 +73,22 @@ data class UserSettingsEntity(
 
     /** "System" | "Light" | "Dark" */
     @ColumnInfo(name = "theme_mode")
-    val themeMode: String = "System"
+    val themeMode: String = "System",
+
+    // ── Custom reminders (up to 3) ─────────────────────────────────
+
+    @ColumnInfo(name = "custom_reminder_1_time")
+    val customReminder1Time: String? = null,
+    @ColumnInfo(name = "custom_reminder_1_msg")
+    val customReminder1Msg: String? = null,
+
+    @ColumnInfo(name = "custom_reminder_2_time")
+    val customReminder2Time: String? = null,
+    @ColumnInfo(name = "custom_reminder_2_msg")
+    val customReminder2Msg: String? = null,
+
+    @ColumnInfo(name = "custom_reminder_3_time")
+    val customReminder3Time: String? = null,
+    @ColumnInfo(name = "custom_reminder_3_msg")
+    val customReminder3Msg: String? = null
 )

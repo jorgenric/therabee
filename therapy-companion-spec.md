@@ -2,7 +2,7 @@
 
 *A personal physical therapy management application*
 
-**Software Specification · Version 1.2 · Android APK (Sideloaded)**
+**Software Specification · Version 1.3 · Android APK (Sideloaded)**
 
 - **Classification:** Personal / Home Health
 - **Platform:** Android 10+ (API 29+) · Sideloaded APK
@@ -23,11 +23,12 @@
 7. Notifications & Reminders — §7
 8. Data Model — §8
 9. Motivation & Wellbeing Features — §9
+   - 9.4 · Humble Brag
 10. Backup, Restore & Update Safety — §10
 11. Technical Requirements — §11
 12. Out of Scope — §12
 13. Future Considerations — §13
-14. Revision Notes (v1.1, v1.2) — §14
+14. Revision Notes (v1.1, v1.2, v1.3) — §14
 
 ---
 
@@ -442,6 +443,66 @@ The slider for interference questions runs 0–10 with anchor labels "Did not in
 
 Streaks are shown only if the user enables them in Settings. If shown, they track consecutive days with *any* completed exercise (not a full program completion). A streak is never broken by a single missed day — a "grace day" of one skipped day is allowed. This is a deliberate, compassionate design choice for someone managing a chronic health condition.
 
+### 9.4 · Humble Brag
+
+#### Overview
+
+The Humble Brag feature generates a short, warm, celebratory summary of the user's recent accomplishments and copies it to the clipboard for easy sharing in any app of her choosing. It is the equivalent of a proud note from a teacher written in the margin of a good test — specific, affirming, and brief enough to forward to a friend, family member, or care provider in a single tap.
+
+> **Design Intent**
+>
+> The output must read like it was written by someone who is genuinely proud of the user — not a statistics report. It should feel personal, warm, and share-ready.
+
+#### Trigger Conditions
+
+The Humble Brag button is available in two contexts:
+
+- **Anytime** — a persistent **Humble Brag** button is accessible from the Progress screen at any time. No milestone is required to use it.
+- **On streak achievement** — when the user earns a streak milestone (see Streak Handling in §9), a prompt appears celebrating the achievement with an option to generate a Humble Brag. This is presented as a secondary call-to-action alongside the streak badge — not a blocking interruption.
+
+#### Content Generation
+
+The Humble Brag card is composed from two parts: a **structured activity summary** and a **pre-written encouraging phrase**.
+
+**Structured activity summary** — drawn directly from logged data, displayed as a formatted stats block:
+
+| Signal | Display label |
+| --- | --- |
+| Completed sessions in the current Mon–Sun week | "Sessions this week" |
+| Total completed sessions since first use | "Lifetime sessions" |
+| Consecutive-day streak (if streaks enabled in Settings) | "Current streak" |
+| Distinct `body_system` values with a completed session in the last 7 days | "Body systems this week" |
+
+The display name from Settings is used to personalize the card header (e.g., "Sarah's Progress"). If no name is set, the header reads "Your Progress."
+
+**Encouraging phrase** — selected at random from a library of 20 pre-written phrases. The phrase appears below the stats block as a warm, brief closing note. A **New quote** button picks a different phrase from the same library without regenerating the stats.
+
+This approach is fully offline, requires no network access, and produces no delay.
+
+#### Share Behavior
+
+1. User taps **Humble Brag** (from Progress screen or streak achievement prompt).
+2. The card appears immediately — no loading state — showing the structured stats block and a randomly selected encouraging phrase.
+3. Two actions are offered:
+   - **Copy to clipboard** — copies a formatted plain-text version of both the stats and the phrase; shows a brief confirmation toast ("Copied!"). This is the primary action.
+   - **New quote** — replaces the phrase with a different randomly selected one from the library; stats are unchanged.
+4. The user pastes the text into any app of their choosing (Messages, email, a social platform, etc.). The app does not send or post anything directly.
+
+> **Privacy**
+>
+> No data leaves the device as part of this feature. All content is generated locally from on-device data and placed on the clipboard. The app has no knowledge of where it is pasted. No network access is required or requested.
+
+#### Implementation Notes
+
+- The stats block is computed directly from existing `Session`, `Exercise`, and `UserSettings` queries already used by the Progress screen. No additional queries are required beyond what `ProgressViewModel` loads.
+- The phrase library is a static list of 20 pre-written phrases compiled into the app — no file I/O, no network, no configuration. Selection is random at tap time; the **New quote** button reselects without regenerating the stats.
+- The Humble Brag button is visually distinct but not prominent — a trophy icon (`EmojiEvents`) in the Progress screen TopAppBar, alongside the check-in button. It should feel like a treat to discover, not a core navigation item.
+- The card contents are not stored or logged. Each tap computes a fresh stats snapshot.
+
+#### Data Model Impact
+
+No new database tables are required. The feature reads from existing `Session`, `Exercise`, and `UserSettings` tables only. No new columns are needed.
+
 ---
 
 ## §10 Backup, Restore & Update Safety
@@ -630,6 +691,16 @@ These are out of scope for the initial build but worth designing around from the
 
 ## §14 Revision Notes
 
+### v1.3 — Humble Brag feature
+
+*Sections touched: §9 (new §9.4 · Humble Brag), TOC.*
+
+Added §9.4 specifying the Humble Brag feature: a user-initiated, on-demand card that presents a structured summary of the user's recent exercise accomplishments alongside a randomly selected encouraging phrase, and copies both to the clipboard for sharing. The feature is accessible from the Progress screen at any time via a trophy icon in the TopAppBar.
+
+The card displays four data signals derived from existing queries: sessions completed this week, lifetime session count, current streak (if streaks are enabled), and body systems worked in the last 7 days. A display-name header personalizes the card. Below the stats block, a phrase is selected at random from a compiled library of 20 pre-written encouraging messages. A **New quote** button reselects the phrase without recomputing the stats. **Copy** formats both sections as plain text and places them on the clipboard with a toast confirmation.
+
+No network access, no external API, no loading state. All content is produced locally from on-device data at tap time and is not stored. No new database tables or columns are required.
+
 ### v1.3 — Export format clarifications & exercise import specification
 
 *Sections touched: §10.1, §10.5, new §10.6 (renumbered Failure Modes to §10.7).*
@@ -670,4 +741,4 @@ The pain/energy check-in bottom sheet is now auto-surfaced from the Today screen
 >
 > This specification is a starting point. The most important thing this app can do is lower the barrier to starting — even on the hardest days. Every technical decision should be evaluated against that goal. The best feature is the one that makes the next exercise feel possible.
 
-*Therapy Companion · Software Specification v1.2 · April 2026*
+*Therapy Companion · Software Specification v1.3 · April 2026*

@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.therapycompanion.data.model.CheckIn
 import com.therapycompanion.data.model.Session
 import com.therapycompanion.data.model.SessionStatus
+import com.therapycompanion.humbleBrag.HumbleBragGenerator
+import java.util.UUID
 import com.therapycompanion.data.repository.CheckInRepository
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
@@ -21,6 +23,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+sealed class HumbleBragState {
+    object Idle : HumbleBragState()
+    data class Ready(val phrase: String) : HumbleBragState()
+}
+
 data class ProgressUiState(
     val sessions: List<Session> = emptyList(),
     val checkIns: List<CheckIn> = emptyList(),
@@ -35,7 +42,14 @@ data class ProgressUiState(
     /** Count of completed sessions in the current Mon–Sun week. */
     val exercisesThisWeek: Int = 0,
     /** exerciseId → name lookup for the session history log. */
-    val exerciseNamesById: Map<String, String> = emptyMap()
+    val exerciseNamesById: Map<String, String> = emptyMap(),
+    /** True while the manual check-in bottom sheet is visible. */
+    val showManualCheckIn: Boolean = false,
+    /** Drive the Humble Brag overlay. */
+    val humbleBragState: HumbleBragState = HumbleBragState.Idle,
+    val displayName: String = "",
+    val lifetimeCompletedCount: Int = 0,
+    val bodySystemsLast7Days: List<String> = emptyList()
 )
 
 class ProgressViewModel(
@@ -58,7 +72,10 @@ class ProgressViewModel(
         }
         viewModelScope.launch {
             userSettingsRepository.getUserSettings().collect { settings ->
-                _uiState.update { it.copy(showStreaks = settings.showStreaks) }
+                _uiState.update { it.copy(
+                    showStreaks = settings.showStreaks,
+                    displayName = settings.displayName
+                ) }
             }
         }
         loadData()
@@ -77,7 +94,8 @@ class ProgressViewModel(
 
             val sessions  = sessionRepository.getSessionsInDateRange(oneYearAgo, now)
             val checkIns  = checkInRepository.getCheckInsInDateRange(thirtyDaysAgo, now)
-            val covered   = sessionRepository.getCompletedBodySystemsSince(sevenDaysAgo).toSet()
+            val bodySystems7d = sessionRepository.getCompletedBodySystemsSince(sevenDaysAgo)
+            val covered   = bodySystems7d.toSet()
             val streak    = computeStreak(sessions, today)
 
             val exercisesThisWeek = sessions.count {
@@ -87,6 +105,9 @@ class ProgressViewModel(
             val exerciseNames = exerciseRepository.getAllExercisesOnce()
                 .associate { it.id to it.name }
 
+            val allSessions = sessionRepository.getAllSessionsOnce()
+            val lifetimeCount = allSessions.count { it.status == SessionStatus.Completed }
+
             _uiState.update {
                 it.copy(
                     sessions = sessions,
@@ -95,6 +116,8 @@ class ProgressViewModel(
                     currentStreak = streak,
                     exercisesThisWeek = exercisesThisWeek,
                     exerciseNamesById = exerciseNames,
+                    lifetimeCompletedCount = lifetimeCount,
+                    bodySystemsLast7Days = bodySystems7d,
                     isLoading = false
                 )
             }
@@ -103,6 +126,48 @@ class ProgressViewModel(
 
     fun selectMonth(month: LocalDate) {
         _uiState.update { it.copy(selectedMonth = month.withDayOfMonth(1)) }
+    }
+
+    fun openManualCheckIn() {
+        _uiState.update { it.copy(showManualCheckIn = true) }
+    }
+
+    fun dismissManualCheckIn() {
+        _uiState.update { it.copy(showManualCheckIn = false) }
+    }
+
+    fun submitManualCheckIn(
+        painScore: Int,
+        energyScore: Int,
+        bpiDomain: String?,
+        bpiScore: Int?,
+        freeText: String?
+    ) {
+        _uiState.update { it.copy(showManualCheckIn = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            checkInRepository.insertCheckIn(
+                CheckIn(
+                    id = UUID.randomUUID().toString(),
+                    checkedInAt = System.currentTimeMillis(),
+                    painScore = painScore,
+                    energyScore = energyScore,
+                    bpiDomain = bpiDomain,
+                    bpiScore = bpiScore,
+                    freeText = freeText,
+                    dismissed = false
+                )
+            )
+            // Reload so the trend chart reflects the new entry.
+            loadData()
+        }
+    }
+
+    fun generateHumbleBrag() {
+        _uiState.update { it.copy(humbleBragState = HumbleBragState.Ready(HumbleBragGenerator.randomPhrase())) }
+    }
+
+    fun dismissHumbleBrag() {
+        _uiState.update { it.copy(humbleBragState = HumbleBragState.Idle) }
     }
 
     fun sessionDatesInMonth(): Set<LocalDate> {

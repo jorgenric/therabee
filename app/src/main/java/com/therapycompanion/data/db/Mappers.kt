@@ -1,6 +1,7 @@
 package com.therapycompanion.data.db
 
 import com.therapycompanion.data.model.CheckIn
+import com.therapycompanion.data.model.CustomReminder
 import com.therapycompanion.data.model.Exercise
 import com.therapycompanion.data.model.Frequency
 import com.therapycompanion.data.model.Session
@@ -91,22 +92,33 @@ fun CheckIn.toEntity(): CheckInEntity = CheckInEntity(
 
 // ── UserSettings ──────────────────────────────────────────────────────────────
 
-fun UserSettingsEntity.toDomain(): UserSettings = UserSettings(
-    dailyLoad = dailyLoad,
-    easierDayEnabled = easierDayEnabled,
-    morningReminderEnabled = morningReminderEnabled,
-    morningReminderTime = morningReminderTime,
-    afternoonCheckInEnabled = afternoonCheckInEnabled,
-    afternoonCheckInTime = afternoonCheckInTime,
-    eveningEncouragementEnabled = eveningEncouragementEnabled,
-    eveningEncouragementTime = eveningEncouragementTime,
-    quietHoursStart = quietHoursStart,
-    quietHoursEnd = quietHoursEnd,
-    checkInsEnabled = checkInsEnabled,
-    showStreaks = showStreaks,
-    displayName = displayName,
-    themeMode = themeMode
-)
+fun UserSettingsEntity.toDomain(): UserSettings {
+    val reminders = buildList {
+        if (!customReminder1Time.isNullOrBlank() && !customReminder1Msg.isNullOrBlank())
+            add(CustomReminder(customReminder1Time, customReminder1Msg))
+        if (!customReminder2Time.isNullOrBlank() && !customReminder2Msg.isNullOrBlank())
+            add(CustomReminder(customReminder2Time, customReminder2Msg))
+        if (!customReminder3Time.isNullOrBlank() && !customReminder3Msg.isNullOrBlank())
+            add(CustomReminder(customReminder3Time, customReminder3Msg))
+    }
+    return UserSettings(
+        dailyLoad = dailyLoad,
+        easierDayEnabled = easierDayEnabled,
+        morningReminderEnabled = morningReminderEnabled,
+        morningReminderTime = morningReminderTime,
+        afternoonCheckInEnabled = afternoonCheckInEnabled,
+        afternoonCheckInTime = afternoonCheckInTime,
+        eveningEncouragementEnabled = eveningEncouragementEnabled,
+        eveningEncouragementTime = eveningEncouragementTime,
+        quietHoursStart = quietHoursStart,
+        quietHoursEnd = quietHoursEnd,
+        checkInsEnabled = checkInsEnabled,
+        showStreaks = showStreaks,
+        displayName = displayName,
+        themeMode = themeMode,
+        customReminders = reminders
+    )
+}
 
 fun UserSettings.toEntity(): UserSettingsEntity = UserSettingsEntity(
     id = 1,
@@ -123,5 +135,11 @@ fun UserSettings.toEntity(): UserSettingsEntity = UserSettingsEntity(
     checkInsEnabled = checkInsEnabled,
     showStreaks = showStreaks,
     displayName = displayName,
-    themeMode = themeMode
+    themeMode = themeMode,
+    customReminder1Time = customReminders.getOrNull(0)?.time,
+    customReminder1Msg  = customReminders.getOrNull(0)?.message,
+    customReminder2Time = customReminders.getOrNull(1)?.time,
+    customReminder2Msg  = customReminders.getOrNull(1)?.message,
+    customReminder3Time = customReminders.getOrNull(2)?.time,
+    customReminder3Msg  = customReminders.getOrNull(2)?.message
 )

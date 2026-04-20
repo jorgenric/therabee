@@ -26,7 +26,8 @@ object DailyScheduler {
      * Steps:
      * 1. Filter to exercises scheduled for today
      * 2. Filter out frequency-exhausted exercises
-     * 3. Sort by priority ASC, then days-since-last-done DESC
+     * 2b. (Easier day only) Narrow to Priority 1; fall back to Priority 2 if none available
+     * 3. Sort by priority ASC, then duration ASC (easier day only), then days-since-last-done DESC
      * 4. Apply daily load cap (halved + floored at 1 if easierDay)
      * 5. Ensure body-system diversity
      * 6. Return final list
@@ -67,13 +68,28 @@ object DailyScheduler {
 
         if (eligible.isEmpty()) return emptyList()
 
-        // Step 3: Sort by priority ASC (1 = highest), then days-since-last-done DESC
+        // Step 2b: Easier day priority filter — P1 only; fall back to P2 if no P1 exists;
+        // fall back to all eligible if neither P1 nor P2 exists (edge case: library has only P3).
+        val priorityFiltered = if (easierDay) {
+            val p1 = eligible.filter { it.priority == 1 }
+            if (p1.isNotEmpty()) p1
+            else {
+                val p2 = eligible.filter { it.priority == 2 }
+                p2.ifEmpty { eligible }
+            }
+        } else {
+            eligible
+        }
+
+        // Step 3: Sort by priority ASC (1 = highest), then duration ASC when in easier day
+        // (shorter exercises preferred), then days-since-last-done DESC.
         val lastSessionByExercise: Map<String, Long> = completedSessions
             .groupBy { it.exerciseId }
             .mapValues { (_, sessions) -> sessions.maxOf { it.startedAt } }
 
-        val sorted = eligible.sortedWith(
+        val sorted = priorityFiltered.sortedWith(
             compareBy<Exercise> { it.priority }
+                .thenBy { if (easierDay) it.durationMinutes else 0 }
                 .thenByDescending { exercise ->
                     lastSessionByExercise[exercise.id]?.let { lastMs ->
                         todayStart - lastMs // larger = more days since last done
@@ -85,8 +101,9 @@ object DailyScheduler {
         val rawCap = if (easierDay) maxOf(1, dailyLoad / 2) else dailyLoad
         val cap = rawCap.coerceIn(1, sorted.size)
 
-        // Step 5: Body-system diversity pass
-        val selected = applyBodySystemDiversity(sorted, cap, eligible)
+        // Step 5: Body-system diversity pass (uses priorityFiltered as the candidate pool
+        // so diversity swaps respect the easier-day priority constraint).
+        val selected = applyBodySystemDiversity(sorted, cap, priorityFiltered)
 
         return selected
     }
