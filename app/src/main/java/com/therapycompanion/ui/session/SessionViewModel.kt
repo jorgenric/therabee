@@ -24,8 +24,12 @@ import java.util.UUID
 data class SessionUiState(
     val exercise: Exercise? = null,
     val isLoading: Boolean = true,
-    val elapsedSeconds: Long = 0L,
-    val isRunning: Boolean = false,
+    /** Seconds remaining on the optional countdown timer. Initialised to durationMinutes × 60. */
+    val remainingSeconds: Int = 0,
+    /** True while the countdown is actively ticking. */
+    val timerActive: Boolean = false,
+    /** True once the user has started the timer at least once — controls timer visibility. */
+    val timerStarted: Boolean = false,
     /** True when Done has been tapped — shows the acknowledgment overlay. */
     val showAcknowledgment: Boolean = false,
     val acknowledgmentMessage: String = "",
@@ -47,6 +51,8 @@ class SessionViewModel(
     private var timerJob: Job? = null
     private var sessionStartTime: Long = 0L
     private var sessionId: String = UUID.randomUUID().toString()
+    /** Total seconds for the current exercise — set once the exercise loads. */
+    private var totalSeconds: Int = 0
 
     init {
         loadExercise()
@@ -55,7 +61,16 @@ class SessionViewModel(
     private fun loadExercise() {
         viewModelScope.launch(Dispatchers.IO) {
             val exercise = exerciseRepository.getExerciseById(exerciseId)
-            _uiState.update { it.copy(exercise = exercise, isLoading = false) }
+            if (exercise != null) {
+                totalSeconds = exercise.durationMinutes * 60
+            }
+            _uiState.update {
+                it.copy(
+                    exercise = exercise,
+                    isLoading = false,
+                    remainingSeconds = totalSeconds
+                )
+            }
             if (exercise != null) {
                 startSession()
             }
@@ -77,17 +92,33 @@ class SessionViewModel(
                 )
             )
         }
-        _uiState.update { it.copy(isRunning = true, currentSessionId = sessionId) }
-        startTimer()
+        _uiState.update { it.copy(currentSessionId = sessionId) }
+        // Timer is NOT auto-started — user activates it via toggleTimer().
     }
 
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000)
-                _uiState.update { state ->
-                    state.copy(elapsedSeconds = state.elapsedSeconds + 1)
+    /**
+     * Starts or pauses the optional countdown timer.
+     * The timer counts down from [totalSeconds] and stops automatically at zero.
+     */
+    fun toggleTimer() {
+        if (_uiState.value.timerActive) {
+            timerJob?.cancel()
+            _uiState.update { it.copy(timerActive = false) }
+        } else {
+            _uiState.update { it.copy(timerActive = true, timerStarted = true) }
+            timerJob?.cancel()
+            timerJob = viewModelScope.launch {
+                while (true) {
+                    delay(1000)
+                    val current = _uiState.value.remainingSeconds
+                    val next = (current - 1).coerceAtLeast(0)
+                    _uiState.update { state ->
+                        state.copy(
+                            remainingSeconds = next,
+                            timerActive = next > 0
+                        )
+                    }
+                    if (next == 0) break
                 }
             }
         }
@@ -125,7 +156,7 @@ class SessionViewModel(
 
     fun markComplete() {
         timerJob?.cancel()
-        val elapsed = _uiState.value.elapsedSeconds
+        val elapsed = (totalSeconds - _uiState.value.remainingSeconds).toLong().coerceAtLeast(0L)
         val now = System.currentTimeMillis()
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -143,7 +174,6 @@ class SessionViewModel(
             val next = findNextExercise()
             _uiState.update {
                 it.copy(
-                    isRunning = false,
                     showAcknowledgment = true,
                     acknowledgmentMessage = acknowledgmentMessages.randomOrNull() ?: "Great work!",
                     nextExerciseId = next?.id,
