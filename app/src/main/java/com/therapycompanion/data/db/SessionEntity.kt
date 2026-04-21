@@ -50,10 +50,14 @@ data class SessionEntity(
     @ColumnInfo(name = "elapsed_seconds")
     val elapsedSeconds: Long = 0L,
 
-    /** SessionStatus enum name: InProgress, Completed, Skipped */
+    /** SessionStatus enum name: InProgress, Completed, Skipped, Partial */
     @ColumnInfo(name = "status")
     val status: String,
 
     @ColumnInfo(name = "notes")
-    val notes: String? = null
+    val notes: String? = null,
+
+    /** Session origin: "Prompted" (guided session) or "Adhoc" (I just did this). */
+    @ColumnInfo(name = "source")
+    val source: String = "Prompted"
 )

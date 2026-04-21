@@ -30,7 +30,10 @@ data class HomeUiState(
     val settings: UserSettings = UserSettings.Default,
     val isLoading: Boolean = true,
     val currentDate: LocalDate = LocalDate.now(),
-    val showCheckInPrompt: Boolean = false
+    val showCheckInPrompt: Boolean = false,
+    /** All sessions today with Completed or Partial status — includes ad-hoc completions
+     *  for exercises that are not in the scheduled list. */
+    val completedTodayCount: Int = 0
 )
 
 data class ExerciseWithStatus(
@@ -128,6 +131,12 @@ class HomeViewModel(
             )
         }
 
+        // Count all completed/partial sessions today — includes ad-hoc completions for
+        // exercises not in the scheduled list.
+        val completedTodayCount = todaySessions.count {
+            it.status == SessionStatus.Completed || it.status == SessionStatus.Partial
+        }
+
         // Show the check-in prompt if enabled, not yet shown this session, and not done today.
         val showPrompt = if (settings.checkInsEnabled && !hasShownCheckInThisSession) {
             withContext(Dispatchers.IO) {
@@ -144,7 +153,8 @@ class HomeViewModel(
                 settings = settings,
                 isLoading = false,
                 currentDate = today,
-                showCheckInPrompt = showPrompt
+                showCheckInPrompt = showPrompt,
+                completedTodayCount = completedTodayCount
             )
         }
     }
@@ -171,7 +181,8 @@ class HomeViewModel(
                     completedAt = now,
                     elapsedSeconds = 0,
                     status = SessionStatus.Skipped,
-                    notes = null
+                    notes = null,
+                    source = Session.SOURCE_PROMPTED
                 )
             )
         }

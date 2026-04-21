@@ -13,9 +13,17 @@ data class Session(
     val completedAt: Long?,
     val elapsedSeconds: Long,
     val status: SessionStatus,
-    val notes: String?
+    val notes: String?,
+    /** How the session was initiated: SOURCE_PROMPTED (guided) or SOURCE_ADHOC (I just did this). */
+    val source: String = SOURCE_PROMPTED
 ) {
     val isCompleted: Boolean get() = status == SessionStatus.Completed
     val isSkipped: Boolean get() = status == SessionStatus.Skipped
     val isInProgress: Boolean get() = status == SessionStatus.InProgress
+    val isAdhoc: Boolean get() = source == SOURCE_ADHOC
+
+    companion object {
+        const val SOURCE_PROMPTED = "Prompted"
+        const val SOURCE_ADHOC = "Adhoc"
+    }
 }

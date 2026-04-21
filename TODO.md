@@ -18,6 +18,8 @@ Gaps identified against `therapy-companion-spec.md` v1.3. Check off items as the
 
 ## Completed
 
+- [x] §5.2 Log unprompted completions — `SessionStatus.Partial` added; `Session.source` field (Prompted/Adhoc) with DB migration v5→v6; "I just did this" card on ExerciseDetailScreen (date picker, Done/Partial toggle, Save → "Logged!" → auto-back); `logAdhocCompletion()` in LibraryViewModel; CSV and JSON exports include `source` column
+
 - [x] §5.1 Home screen — time-of-day greeting (with name when set), "Start: [Exercise Name]" full-width button for the next pending exercise; summary line shows `"You've done N today"` with no total count per spec language standards
 - [x] §5.5 Settings screen — display name text field (Profile section), Light/Dark/System theme toggle (Appearance section); Room DB migration v3 → v4 adds display_name and theme_mode columns; theme applied reactively from MainActivity
 - [x] §5.2 Library screen — search bar, filter chips (body system + "Not done recently"), groups collapsed by default

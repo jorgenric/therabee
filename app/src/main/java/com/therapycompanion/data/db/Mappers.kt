@@ -53,7 +53,8 @@ fun SessionEntity.toDomain(): Session = Session(
     completedAt = completedAt,
     elapsedSeconds = elapsedSeconds,
     status = SessionStatus.fromString(status),
-    notes = notes
+    notes = notes,
+    source = source
 )
 
 fun Session.toEntity(): SessionEntity = SessionEntity(
@@ -63,7 +64,8 @@ fun Session.toEntity(): SessionEntity = SessionEntity(
     completedAt = completedAt,
     elapsedSeconds = elapsedSeconds,
     status = status.name,
-    notes = notes
+    notes = notes,
+    source = source
 )
 
 // ── CheckIn ───────────────────────────────────────────────────────────────────

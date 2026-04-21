@@ -2,13 +2,13 @@
 
 *A personal physical therapy management application*
 
-**Software Specification · Version 1.3 · Android APK (Sideloaded)**
+**Software Specification · Version 1.4 · Android APK (Sideloaded)**
 
 - **Classification:** Personal / Home Health
 - **Platform:** Android 10+ (API 29+) · Sideloaded APK
 - **Distribution:** Direct install, no Play Store
 - **Status:** In development
-- **Date:** April 2026 (v1.2 revision)
+- **Date:** April 2026 (v1.4 revision)
 
 ---
 
@@ -28,7 +28,7 @@
 11. Technical Requirements — §11
 12. Out of Scope — §12
 13. Future Considerations — §13
-14. Revision Notes (v1.1, v1.2, v1.3) — §14
+14. Revision Notes (v1.1, v1.2, v1.3, v1.4) — §14
 
 ---
 
@@ -155,10 +155,11 @@ The complete list of all configured exercises. This is the reference view, not t
 - Admin mode (see §5.5) allows adding, editing, and deleting exercises.
 - Search bar to find an exercise by name or keyword.
 - Filter by body system or by "not done recently."
+- **Log an unprompted completion** — the detail view includes an **I just did this** action for any exercise in the library. Tapping it records a completed session *without* opening the guided Session view (§5.3), because the user is reporting something she has already done on her own initiative. A compact date picker defaults to today and allows selecting any prior day; time-of-day is not required. Status defaults to **Done** with an optional switch to **Partial**. The logged session is stored with `source = Adhoc` (see §8) but is otherwise indistinguishable from a prompted completion: it satisfies the recurrence window used by the daily algorithm (§6), counts toward streaks (§9), contributes to body-system coverage on the Progress screen (§5.4), and is included in the Humble Brag stats (§9.4). On save, the app shows the same warm acknowledgment used after a guided session (§9, *Completion Acknowledgment*) and returns to the Library — it does not advance to a next exercise, since she did not ask to start a session. Free-form "Other" entries are not supported; if she wants to log something new, she adds it to the library first.
 
 ### 5.3 · Session View
 
-The active exercise experience. Opened when the user taps **Start** on any exercise.
+The active exercise experience. Opened when the user taps **Start** on any exercise. The Session view is the *guided* completion flow — used when she's about to do the exercise now and wants step-by-step support. It is **not** the path for logging something she has already finished; that uses the lightweight *I just did this* flow described in §5.2.
 
 - Full-screen, distraction-free layout showing one exercise at a time.
 - Exercise name displayed in large, readable typography.
@@ -231,7 +232,11 @@ Each day, the app generates a recommended list using the following logic:
 
 1. Filter: exercises where today matches scheduled_days AND active = true
 2. Filter: exclude exercises completed within their recurrence window
-   (e.g., a 3x/week exercise done 3 times already this week is excluded)
+   (e.g., a 3x/week exercise done 3 times already this week is excluded).
+   Sessions with source = Prompted and source = Adhoc are counted equally
+   here — an exercise the user logged via "I just did this" (§5.2) is
+   indistinguishable from one completed through the guided flow for
+   scheduling purposes.
 3. Sort by priority ASC (priority 1 first), then by days_since_last_done DESC
 4. Select top N, where N = user's configured daily load setting (minimum 1)
 5. Ensure at least 1 exercise from each body_system value represented in
@@ -305,10 +310,26 @@ Exercise {
 Session {
   id: UUID
   exercise_id: UUID          // FK → Exercise
-  date: Date
+  date: Date                 // The day the exercise was performed. For ad-hoc
+                             // logs this may be backdated (see §5.2); for
+                             // prompted completions it is always "today".
   status: Enum               // Completed | Skipped | Partial
-  duration_actual: Int?      // seconds actually spent (optional)
-  created_at: Timestamp
+  source: Enum               // Prompted | Adhoc
+                             //   Prompted = completed through the guided Session
+                             //              view (§5.3), originating from the
+                             //              Today recommended list.
+                             //   Adhoc    = logged via "I just did this" (§5.2),
+                             //              with no guided session. May be
+                             //              backdated.
+                             // Both sources are treated equally by the scheduling
+                             // algorithm (§6), streak handling (§9), and the
+                             // Humble Brag stats (§9.4); source is retained for
+                             // history display, CSV export (§10.5), and future
+                             // analytics only.
+  duration_actual: Int?      // seconds actually spent (optional). Typically null
+                             // for Adhoc entries since the user isn't timing them.
+  created_at: Timestamp      // Real-world timestamp when the row was inserted —
+                             // distinct from `date` for backdated ad-hoc logs.
 }
 
 -- CHECK_INS table (one row per completed or dismissed daily check-in)
@@ -339,7 +360,7 @@ UserSettings {
 }
 ```
 
-*Database schema version: 2. The v1→v2 migration is a no-op on the `exercises` table because `body_system` was already a TEXT column; removing the enum constraint is a repository-layer change, not a column-type change.*
+*Database schema version: 3. The v1→v2 migration is a no-op on the `exercises` table because `body_system` was already a TEXT column; removing the enum constraint is a repository-layer change, not a column-type change. The v2→v3 migration adds a `source` TEXT column to the `sessions` table with a `NOT NULL DEFAULT 'Prompted'` — existing rows backfill to `Prompted`, which is correct, since every session written before v1.4 came from the guided Session view.*
 
 ---
 
@@ -441,7 +462,7 @@ The slider for interference questions runs 0–10 with anchor labels "Did not in
 
 #### Streak Handling
 
-Streaks are shown only if the user enables them in Settings. If shown, they track consecutive days with *any* completed exercise (not a full program completion). A streak is never broken by a single missed day — a "grace day" of one skipped day is allowed. This is a deliberate, compassionate design choice for someone managing a chronic health condition.
+Streaks are shown only if the user enables them in Settings. If shown, they track consecutive days with *any* completed exercise (not a full program completion). Completed sessions count toward the streak regardless of their `source` — both **Prompted** (guided Session view, §5.3) and **Adhoc** (logged via *I just did this*, §5.2) contribute equally, and a backdated ad-hoc entry retroactively fills in the day it is dated. A streak is never broken by a single missed day — a "grace day" of one skipped day is allowed. This is a deliberate, compassionate design choice for someone managing a chronic health condition.
 
 ### 9.4 · Humble Brag
 
@@ -472,6 +493,8 @@ The Humble Brag card is composed from two parts: a **structured activity summary
 | Total completed sessions since first use | "Lifetime sessions" |
 | Consecutive-day streak (if streaks enabled in Settings) | "Current streak" |
 | Distinct `body_system` values with a completed session in the last 7 days | "Body systems this week" |
+
+All four signals count sessions regardless of `source` — both **Prompted** (guided Session view, §5.3) and **Adhoc** (logged via *I just did this*, §5.2) contribute equally. From the user's point of view a completed exercise is a completed exercise, and the Humble Brag reflects her total effort, not just her on-plan adherence.
 
 The display name from Settings is used to personalize the card header (e.g., "Sarah's Progress"). If no name is set, the header reads "Your Progress."
 
@@ -523,7 +546,7 @@ A full export is a single JSON file capturing the complete state of the user's p
 | `schemaVersion` | Int | Room database schema version at export time. Import refuses files where this exceeds the installed app's schema version. |
 | `exportedAt` | Long | UTC epoch milliseconds of export time. |
 | `exercises` | Array | All rows from the `Exercise` table — including `active = false` rows. Retired exercises are preserved so old sessions still resolve to a name. |
-| `sessions` | Array | Complete `Session` history — every Completed / Skipped / InProgress record. |
+| `sessions` | Array | Complete `Session` history — every Completed / Skipped / InProgress record. Includes the `source` field (`Prompted` / `Adhoc`) and any backdated `date` values from ad-hoc logs (§5.2). |
 | `checkIns` | Array | Complete `CheckIn` history, including dismissed rows. Preserves FPS-R, energy, and BPI interference trends. |
 | `userSettings` | Object or null | All fields from the `UserSettings` table. Restores daily load, notification schedule, toggles, and preferences. |
 
@@ -567,9 +590,10 @@ Separately from the full JSON backup, the app supports two CSV exports oriented 
 | --- | --- |
 | `id` | Session UUID |
 | `exerciseId` | Exercise UUID (join key if used alongside an exercise export) |
-| `date` | Local date/time of session start (`yyyy-MM-dd HH:mm:ss`) |
+| `date` | Local date/time of session start (`yyyy-MM-dd HH:mm:ss`). For ad-hoc logs this reflects the user-selected performed-on date, which may be backdated relative to the row's insertion time. |
 | `status` | `Completed` · `Skipped` · `InProgress` |
-| `elapsedSeconds` | Actual time spent in seconds |
+| `source` | `Prompted` · `Adhoc` — distinguishes completions that went through the guided Session view from those logged via *I just did this* (§5.2). Useful for a clinician to see on-plan adherence separately from self-reported ad-hoc work. |
+| `elapsedSeconds` | Actual time spent in seconds. Typically blank for `Adhoc` rows since the user isn't timing the exercise at logging time. |
 | `notes` | Session notes, if any |
 
 **Check-in history CSV** — one row per check-in:
@@ -691,6 +715,18 @@ These are out of scope for the initial build but worth designing around from the
 
 ## §14 Revision Notes
 
+### v1.4 — Logging unprompted completions
+
+*Sections touched: §5.2, §5.3, §6 (algorithm step 2), §8 (Session table + schema version bump to 3), §9 (Streak Handling), §9.4 (Humble Brag stats clarification), §10.1 (export contents), §10.5 (session CSV columns).*
+
+Added a way for the user to record an exercise she completed on her own — i.e., outside the curated daily plan and without going through the guided Session view. The interaction lives on the Exercise Library (§5.2) detail view as an **I just did this** action with a date picker that defaults to today and accepts any prior day. No new screen, no guided flow.
+
+The Session row gets a new `source` field (`Prompted | Adhoc`) so the provenance is preserved without changing how completions are scored. By design, ad-hoc and prompted sessions are treated identically everywhere the user's effort is surfaced: the recommendation algorithm's recurrence-window filter (§6, step 2), streak handling (§9), body-system coverage on the Progress screen (§5.4), and the Humble Brag stats (§9.4) all count both sources equally. The `source` field is retained so that the clinician-facing session CSV (§10.5, new `source` column) can show on-plan adherence separately from self-reported ad-hoc work, and so future analytics ("you did 4 exercises beyond your plan this week") become possible without another schema change.
+
+Free-form ad-hoc exercises are explicitly **not** supported: the user must log against an existing library entry. If she wants to track something new, she adds it to the library first. This keeps `Session.exercise_id` non-nullable and avoids a parallel "untyped activity" data path.
+
+Schema version bumps from 2 to 3. Migration adds `source TEXT NOT NULL DEFAULT 'Prompted'` to the sessions table; existing rows backfill correctly because every pre-v1.4 session originated from the guided flow.
+
 ### v1.3 — Humble Brag feature
 
 *Sections touched: §9 (new §9.4 · Humble Brag), TOC.*
@@ -741,4 +777,4 @@ The pain/energy check-in bottom sheet is now auto-surfaced from the Today screen
 >
 > This specification is a starting point. The most important thing this app can do is lower the barrier to starting — even on the hardest days. Every technical decision should be evaluated against that goal. The best feature is the one that makes the next exercise feel possible.
 
-*Therapy Companion · Software Specification v1.3 · April 2026*
+*Therapy Companion · Software Specification v1.4 · April 2026*

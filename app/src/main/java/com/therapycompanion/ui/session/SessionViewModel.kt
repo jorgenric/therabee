@@ -88,7 +88,8 @@ class SessionViewModel(
                     completedAt = null,
                     elapsedSeconds = 0,
                     status = SessionStatus.InProgress,
-                    notes = null
+                    notes = null,
+                    source = Session.SOURCE_PROMPTED
                 )
             )
         }
@@ -148,7 +149,8 @@ class SessionViewModel(
                     completedAt = now,
                     elapsedSeconds = 0,
                     status = SessionStatus.Skipped,
-                    notes = null
+                    notes = null,
+                    source = Session.SOURCE_PROMPTED
                 )
             )
         }
@@ -168,7 +170,8 @@ class SessionViewModel(
                     completedAt = now,
                     elapsedSeconds = elapsed,
                     status = SessionStatus.Completed,
-                    notes = null
+                    notes = null,
+                    source = Session.SOURCE_PROMPTED
                 )
             )
             val next = findNextExercise()

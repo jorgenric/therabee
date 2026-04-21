@@ -26,11 +26,11 @@ object CsvExporter {
 
     /**
      * Writes session history as CSV to [outputStream].
-     * Columns: id, exerciseId, date, status, elapsedSeconds, notes
+     * Columns: id, exerciseId, date, status, source, elapsedSeconds, notes
      */
     fun exportSessions(sessions: List<Session>, outputStream: OutputStream) {
         val writer = outputStream.writer()
-        writer.write("id,exerciseId,date,status,elapsedSeconds,notes\n")
+        writer.write("id,exerciseId,date,status,source,elapsedSeconds,notes\n")
         sessions.sortedByDescending { it.startedAt }.forEach { s ->
             writer.write(
                 listOf(
@@ -38,6 +38,7 @@ object CsvExporter {
                     s.exerciseId,
                     s.startedAt.toReadable(),
                     s.status.name,
+                    s.source,
                     s.elapsedSeconds.toString(),
                     s.notes.orEmpty().csvEscape()
                 ).joinToString(",") + "\n"

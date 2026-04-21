@@ -197,7 +197,8 @@ object JsonImporter {
             completedAt = completedAt,
             elapsedSeconds = elapsedSeconds,
             status = st,
-            notes = notes
+            notes = notes,
+            source = source
         )
     }
 

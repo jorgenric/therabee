@@ -6,10 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.therapycompanion.data.model.Exercise
 import com.therapycompanion.data.model.Frequency
 import com.therapycompanion.data.model.DayBits
+import com.therapycompanion.data.model.Session
 import com.therapycompanion.data.model.SessionStatus
 import com.therapycompanion.data.repository.ExerciseRepository
 import com.therapycompanion.data.repository.SessionRepository
 import kotlinx.coroutines.Dispatchers
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,7 +92,7 @@ class LibraryViewModel(
             val sevenDaysAgo = System.currentTimeMillis() - RECENTLY_DONE_DAYS * 24 * 3600 * 1000
             sessionRepository.getSessionsInDateRangeFlow(sevenDaysAgo, Long.MAX_VALUE).collect { sessions ->
                 val recentIds = sessions
-                    .filter { it.status == SessionStatus.Completed }
+                    .filter { it.status == SessionStatus.Completed || it.status == SessionStatus.Partial }
                     .map { it.exerciseId }
                     .toSet()
                 _uiState.update { recompute(it.copy(recentlyDoneIds = recentIds)) }
@@ -120,6 +123,32 @@ class LibraryViewModel(
 
     fun clearFilters() {
         _uiState.update { recompute(it.copy(searchQuery = "", bodySystemFilter = null, filterNotDoneRecently = false)) }
+    }
+
+    /**
+     * Records an ad-hoc "I just did this" session for [exerciseId] on [performedOn].
+     * The session is inserted with source=Adhoc and status Completed or Partial.
+     */
+    fun logAdhocCompletion(exerciseId: String, performedOn: LocalDate, isPartial: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val performedAt = performedOn
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+            val status = if (isPartial) SessionStatus.Partial else SessionStatus.Completed
+            sessionRepository.insertSession(
+                Session(
+                    id = UUID.randomUUID().toString(),
+                    exerciseId = exerciseId,
+                    startedAt = performedAt,
+                    completedAt = performedAt,
+                    elapsedSeconds = 0,
+                    status = status,
+                    notes = null,
+                    source = Session.SOURCE_ADHOC
+                )
+            )
+        }
     }
 
     /**

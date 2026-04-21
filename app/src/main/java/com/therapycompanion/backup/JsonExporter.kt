@@ -58,7 +58,8 @@ data class SessionBackup(
     val completedAt: Long?,
     val elapsedSeconds: Long,
     val status: String,
-    val notes: String?
+    val notes: String?,
+    val source: String = "Prompted"  // default preserves backward compat with old backups
 )
 
 @Serializable
@@ -92,7 +93,7 @@ data class UserSettingsBackup(
 object JsonExporter {
 
     /** Must match AppDatabase.DATABASE_VERSION. Bumped whenever schema changes. */
-    const val CURRENT_SCHEMA_VERSION = 3
+    const val CURRENT_SCHEMA_VERSION = 6
 
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
@@ -147,7 +148,7 @@ object JsonExporter {
     )
 
     private fun Session.toBackup() = SessionBackup(
-        id, exerciseId, startedAt, completedAt, elapsedSeconds, status.name, notes
+        id, exerciseId, startedAt, completedAt, elapsedSeconds, status.name, notes, source
     )
 
     private fun CheckIn.toBackup() = CheckInBackup(

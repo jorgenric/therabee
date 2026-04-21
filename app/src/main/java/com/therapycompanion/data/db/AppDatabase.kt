@@ -25,7 +25,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CheckInEntity::class,
         UserSettingsEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -99,13 +99,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Version 5 → 6: adds source column to sessions.
+         * DEFAULT 'Prompted' treats all existing sessions as guided sessions,
+         * which is correct since the ad-hoc logging feature did not exist before v6.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE sessions ADD COLUMN source TEXT NOT NULL DEFAULT 'Prompted'"
+                )
+            }
+        }
+
         private fun buildDatabase(context: Context): AppDatabase =
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 DATABASE_NAME
             )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
     }
 }

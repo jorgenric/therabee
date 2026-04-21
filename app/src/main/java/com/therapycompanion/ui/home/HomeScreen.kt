@@ -141,8 +141,10 @@ fun HomeScreen(
                     EmptyTodayState()
                 }
                 else -> {
-                    val completedCount = uiState.todaysExercises.count { it.status == SessionStatus.Completed }
-                    val totalCount = uiState.todaysExercises.size
+                    val scheduledCount = uiState.todaysExercises.size
+                    val scheduledDoneCount = uiState.todaysExercises.count {
+                        it.status == SessionStatus.Completed || it.status == SessionStatus.Partial
+                    }
                     val nextExercise = uiState.todaysExercises.firstOrNull { it.status == null }
 
                     Column(
@@ -151,7 +153,10 @@ fun HomeScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        DailySummary(completed = completedCount, total = totalCount)
+                        DailySummary(
+                            completedToday = uiState.completedTodayCount,
+                            allScheduledDone = scheduledCount > 0 && scheduledDoneCount >= scheduledCount
+                        )
 
                         if (nextExercise != null) {
                             Button(
@@ -222,13 +227,15 @@ private fun ExerciseCard(
     onSkip: () -> Unit
 ) {
     val isCompleted = item.status == SessionStatus.Completed
+    val isPartial = item.status == SessionStatus.Partial
     val isSkipped = item.status == SessionStatus.Skipped
+    val isDone = isCompleted || isPartial
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.outlinedCardColors(
             containerColor = when {
-                isCompleted -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                isDone -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
                 isSkipped -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 else -> MaterialTheme.colorScheme.surface
             }
@@ -248,7 +255,7 @@ private fun ExerciseCard(
                 Text(
                     text = item.exercise.name,
                     style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (isCompleted || isSkipped) TextDecoration.LineThrough else null
+                    textDecoration = if (isDone || isSkipped) TextDecoration.LineThrough else null
                 )
                 Text(
                     text = "${item.exercise.durationMinutes} min · ${item.exercise.frequency.displayName}",
@@ -256,14 +263,18 @@ private fun ExerciseCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (isCompleted) {
-                    Text(
+                when {
+                    isCompleted -> Text(
                         text = stringResource(R.string.session_status_completed),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary
                     )
-                } else if (isSkipped) {
-                    Text(
+                    isPartial -> Text(
+                        text = "Partial",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    isSkipped -> Text(
                         text = stringResource(R.string.session_status_skipped),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -271,7 +282,7 @@ private fun ExerciseCard(
                 }
             }
 
-            if (!isCompleted && !isSkipped) {
+            if (!isDone && !isSkipped) {
                 FilledTonalIconButton(
                     onClick = onStart,
                     modifier = Modifier.size(48.dp)
@@ -291,7 +302,7 @@ private fun ExerciseCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else if (isCompleted) {
+            } else if (isDone) {
                 Icon(
                     Icons.Filled.Check,
                     contentDescription = null,
@@ -304,11 +315,11 @@ private fun ExerciseCard(
 }
 
 @Composable
-private fun DailySummary(completed: Int, total: Int) {
+private fun DailySummary(completedToday: Int, allScheduledDone: Boolean) {
     val message = when {
-        completed == total -> "All done for today — great work!"
-        completed == 0 -> "You've done 0 today — every day is a fresh start."
-        else -> "You've done $completed today — keep it going!"
+        allScheduledDone -> "All done for today — great work!"
+        completedToday == 0 -> "You've done 0 today — every day is a fresh start."
+        else -> "You've done $completedToday today — keep it going!"
     }
     Text(
         text = message,
